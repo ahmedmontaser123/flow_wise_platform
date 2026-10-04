@@ -1,0 +1,31 @@
+services:
+
+  pgvector:
+    image: pgvector/pgvector:0.8.0-pg17
+    container_name: flow_wise_pgvector
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+
+    environment:
+      POSTGRES_USER: Postgress
+      POSTGRES_PASSWORD: Postgress123
+      POSTGRES_DB: flow_wise_db
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: flow_wise_pgadmin
+    ports:
+      - "5050:80"
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@flowwise.local
+      PGADMIN_DEFAULT_PASSWORD: admin123
+
+    depends_on:
+      - pgvector
+
+volumes:
+  pgvector_data:
