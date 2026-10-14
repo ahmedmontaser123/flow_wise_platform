@@ -1,0 +1,108 @@
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from models.db.flow_wise.schema import JobRequirement
+from schema.job_requirement_schema import (
+    JobRequirementCreateRequest,
+    JobRequirementUpdateRequest,
+)
+
+
+class JobRequirementRepository:
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def create_job_requirement(
+        self,
+        requirement_data: JobRequirementCreateRequest,
+    ) -> JobRequirement:
+        db_requirement = JobRequirement(
+            **requirement_data.model_dump()
+        )
+
+        try:
+            self.session.add(db_requirement)
+            await self.session.commit()
+            await self.session.refresh(db_requirement)
+            return db_requirement
+        except Exception:
+            await self.session.rollback()
+            raise
+
+    async def get_job_requirement_by_id(
+        self,
+        requirement_id: int,
+    ) -> JobRequirement | None:
+        query = select(JobRequirement).where(
+            JobRequirement.id == requirement_id
+        )
+
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def get_job_requirements_by_job_id(
+        self,
+        job_id: int,
+    ) -> list[JobRequirement]:
+        query = (
+            select(JobRequirement)
+            .where(JobRequirement.job_id == job_id)
+            .order_by(JobRequirement.id)
+        )
+
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def get_all_job_requirements(
+        self,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[JobRequirement]:
+        if not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
+
+        if offset < 0:
+            raise ValueError("offset cannot be negative")
+
+        query = (
+            select(JobRequirement)
+            .order_by(JobRequirement.id)
+            .limit(limit)
+            .offset(offset)
+        )
+
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def update_job_requirement(
+        self,
+        requirement: JobRequirement,
+        requirement_data: JobRequirementUpdateRequest,
+    ) -> JobRequirement:
+        updates = requirement_data.model_dump(
+            exclude_unset=True
+        )
+
+        for key, value in updates.items():
+            setattr(requirement, key, value)
+
+        try:
+            await self.session.commit()
+            await self.session.refresh(requirement)
+            return requirement
+        except Exception:
+            await self.session.rollback()
+            raise
+
+    async def delete_job_requirement(
+        self,
+        requirement: JobRequirement,
+    ) -> bool:
+        try:
+            await self.session.delete(requirement)
+            await self.session.commit()
+            return True
+        except Exception:
+            await self.session.rollback()
+            raise
