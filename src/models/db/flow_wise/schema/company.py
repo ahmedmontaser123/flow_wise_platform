@@ -14,7 +14,7 @@ class Company(Base):
     description = Column(Text, nullable=True)
     address = Column(String(255), nullable=True)
     phone = Column(String(20), nullable=True)
-    email = Column(String(255), nullable=True)
+    email = Column(String(255), nullable=True, unique=True)
 
     # Company 1 -> N HR users / Company 1 -> N Jobs
     hr_users = relationship(

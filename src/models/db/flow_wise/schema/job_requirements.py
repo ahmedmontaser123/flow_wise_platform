@@ -6,11 +6,13 @@
     ForeignKey,
     Integer,
     Text,
+    DateTime
 )
+from datetime import datetime , timezone
 from sqlalchemy.orm import relationship
-
+from sqlalchemy.dialects.postgresql import JSONB
 from .base import Base
-from models.enums import RequirementType
+
 
 
 class JobRequirement(Base):
@@ -23,9 +25,12 @@ class JobRequirement(Base):
         nullable=False,
         index=True,
     )
-    type = Column(SQLEnum(RequirementType), nullable=False)
-    content = Column(Text, nullable=False)
-    required = Column(Boolean, default=True, nullable=False)
+    last_edited = Column(
+        DateTime, nullable=False , default=datetime.now(timezone.utc)
+    )
+    schema_definition = Column(
+        JSONB, nullable=False
+    )    
     weight = Column(
         Float,
         default=1.0,

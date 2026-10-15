@@ -1,6 +1,6 @@
 from enum import Enum
 
 class JobStatus(str, Enum):
-    DRAFT = "draft"
+    DRAFT = "drafted"
     PUBLISHED = "published"
     CLOSED = "closed"
