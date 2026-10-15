@@ -19,6 +19,8 @@ class Candidate(Base):
     education = Column(String(255), nullable=True)
     portfolio = Column(String(500), nullable=True)
     status = Column(SQLEnum(CandidateStatus), nullable=False, default=CandidateStatus.APPLIED)
+    #Location
+    #JSON
 
     # Candidate 1 -> N CV / Candidate 1 -> N Applications
     cvs = relationship(

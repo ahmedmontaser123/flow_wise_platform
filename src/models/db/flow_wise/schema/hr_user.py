@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+﻿from datetime import datetime , timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
@@ -19,7 +19,7 @@ class HRUser(Base):
     full_name = Column(String(100), nullable=False)
     email = Column(String(255), nullable=False, unique=True)
     password = Column(String(255), nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=datetime.now(timezone.utc))
 
     company = relationship("Company", back_populates="hr_users")
     jobs = relationship(

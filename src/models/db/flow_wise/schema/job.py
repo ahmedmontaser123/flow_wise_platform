@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+﻿from datetime import datetime , timezone
 
 from sqlalchemy import (
     Column,
@@ -34,13 +34,13 @@ class Job(Base):
     )
     created_at = Column(
         DateTime,
-        default=datetime.utcnow,
+        default=datetime.now(timezone.utc),
         nullable=False,
     )
     updated_at = Column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
         nullable=False,
     )
 
