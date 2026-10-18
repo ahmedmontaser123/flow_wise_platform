@@ -1,8 +1,6 @@
 ﻿from datetime import datetime
-
 from sqlalchemy import BigInteger, Column, String, Text
 from sqlalchemy.orm import relationship
-
 from .base import Base
 
 

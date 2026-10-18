@@ -1,8 +1,8 @@
 from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from models.db.flow_wise.schema.candidate import Candidate
-from schema.candidate import CandidateCreateRequest, CandidateUpdateRequest
+from models.db.flow_wise.schema import Candidate
+from schema import CandidateCreateRequest, CandidateUpdateRequest
 
 
 class CandidateRepository:
@@ -10,7 +10,7 @@ class CandidateRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create_candidate(
+    async def create_candidate(        # await create_candidate(parm)  ## error curtoine objective
         self,
         candidate_data: CandidateCreateRequest,
     ) -> Candidate:
