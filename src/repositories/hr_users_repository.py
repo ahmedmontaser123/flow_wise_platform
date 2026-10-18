@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from src.models.db.flow_wise.schema.hr_user import HRUser
-from src.schemas.hr_user import HRUserCreate, HRUserUpdate
+from schema import HRUserCreate, HRUserUpdate
 
 class HRUserRepository:
     def __init__(self, session: AsyncSession):

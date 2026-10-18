@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.db.flow_wise.schema import Job
-from schema.job_schema import JobCreateRequest, JobUpdateRequest
+from schema import JobCreateRequest, JobUpdateRequest
 
 
 class JobRepository:

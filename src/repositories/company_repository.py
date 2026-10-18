@@ -1,8 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from src.models.db.flow_wise.schema.company import Company
-# Adjust this import path to wherever your Pydantic schemas are located
-from src.schemas.company import CompanyCreate, CompanyUpdate 
+from schema import CompanyCreate, CompanyUpdate 
 
 class CompanyRepository:
     def __init__(self, session: AsyncSession):
