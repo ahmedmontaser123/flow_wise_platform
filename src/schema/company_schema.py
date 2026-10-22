@@ -1,30 +1,46 @@
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Optional
 
-# Shared properties
-class CompanyBase(BaseModel):
-    company_name: str
+
+class CompanyCreate(BaseModel):
+    company_name: str = Field(..., min_length=2, max_length=150)
     description: Optional[str] = None
-    address: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[EmailStr] = None
+    address: str = Field(..., min_length=2, max_length=255)
+    phone: Optional[str] = Field(
+        default=None,
+        min_length=5,
+        max_length=20,
+        pattern=r"^\+?[0-9]+$"
+    )
+    email: EmailStr
 
-# Properties required when creating a company
-class CompanyCreate(CompanyBase):
-    pass
 
-# Properties allowed when updating a company (all optional)
 class CompanyUpdate(BaseModel):
-    company_name: Optional[str] = None
-    description: Optional[str] = None
-    address: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[EmailStr] = None
+    description: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=2000
+    )
+    address: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=255
+    )
+    phone: Optional[str] = Field(
+        default=None,
+        min_length=5,
+        max_length=20,
+        pattern=r"^\+?[0-9]+$"
+    )
 
-# Properties returned to the client/API response
-class CompanyResponse(CompanyBase):
+
+class CompanyResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
-
-    class Config:
-        from_attributes = True
+    company_name: str
+    description: str | None
+    address: str
+    phone: str | None
+    email: EmailStr

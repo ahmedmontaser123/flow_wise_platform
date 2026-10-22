@@ -1,28 +1,37 @@
 from datetime import datetime
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field,field_validator,ConfigDict
 from typing import Optional
 
-# Shared properties
-class HRUserBase(BaseModel):
+
+class HRUserCreate(BaseModel):
     company_id: int
-    full_name: str
+    full_name: str = Field(...,min_length=4,max_length = 150)
     email: EmailStr
+    password: str = Field(
+        ...,
+        min_length=8,
+        max_length=255
+    )
 
-# Properties required when creating an HR User
-class HRUserCreate(HRUserBase):
-    password: str
+    model_config = ConfigDict(from_attributes=True)
 
-# Properties allowed when updating an HR User (all optional)
+
 class HRUserUpdate(BaseModel):
-    company_id: Optional[int] = None
-    full_name: Optional[str] = None
-    email: Optional[EmailStr] = None
-    password: Optional[str] = None
+    full_name: Optional[str] = Field(default=None,min_length=7, max_length=100)
+    password:Optional[str] = Field(default=None, min_length = 3 , max_length = 255)
 
-# Properties returned to the client/API response
-class HRUserResponse(HRUserBase):
-    id: int
-    created_at: datetime
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, value: str) -> str:
+        if not value:
+            return None 
+        value = value.strip() 
 
-    class Config:
-        from_attributes = True
+        if not all(char.isalpha() or char.isspace() for char in value):
+            raise ValueError(
+                "Full name must contain letters and spaces only"
+            )
+
+        return value
+
+

@@ -7,37 +7,46 @@ class CompanyRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create(self, company_data: CompanyCreate) -> Company:
-        # .model_dump() converts the Pydantic model into a standard Python dictionary
+    async def create_company(self, company_data: CompanyCreate) -> Company:
         new_company = Company(**company_data.model_dump())
         self.session.add(new_company)
         await self.session.commit()
         await self.session.refresh(new_company)
         return new_company
 
-    async def get_by_id(self, company_id: int) -> Company | None:
-        result = await self.session.execute(select(Company).where(Company.id == company_id))
-        return result.scalars().first()
-
-    async def get_all(self) -> list[Company]:
-        result = await self.session.execute(select(Company))
-        return list(result.scalars().all())
-
-    async def update(self, company_id: int, update_data: CompanyUpdate) -> Company | None:
-        # exclude_unset=True is crucial here: it prevents overwriting existing database values with None 
-        # if the user only provided a partial update (like changing only the email)
-        query = (
-            update(Company)
-            .where(Company.id == company_id)
-            .values(**update_data.model_dump(exclude_unset=True))
-            .returning(Company)
-        )
+    async def get_company_by_id(self, company_id: int) -> Company | None:
+        query = select(Company).where(Company.id == company_id)
         result = await self.session.execute(query)
-        await self.session.commit()
-        return result.scalars().first()
+        return result.scalar_one_or_none()
 
-    async def delete(self, company_id: int) -> bool:
-        query = delete(Company).where(Company.id == company_id)
+
+    async def get_company_by_email(self, email:str) -> Company | None:
+        query = select(Company).where(Company.email == email)
         result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+        
+
+
+    async def get_all_companies(self) ->list[Company]:
+        query = select(Company)
+        result = await self.session.execute(query)
+        return result.scalars().all()
+
+
+    async def update_company(self,company_data:Company, company_updated_data: CompanyUpdate) -> Company | None:
+
+        company_data.description = company_updated_data.description
+        company_data.address = company_updated_data.address
+        company_data.phone = company_updated_data.phone
+
         await self.session.commit()
-        return result.rowcount > 0
+        await self.session.refresh(company_data)
+        return company_data
+
+
+
+
+    async def delete_company(self, company:Company) -> bool:
+        await self.session.delete(company)
+        await self.session.commit()
+        return True

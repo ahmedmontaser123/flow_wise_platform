@@ -15,8 +15,11 @@ class CandidateCreateRequest(BaseModel):  # str | None
     @field_validator("full_name")
     @classmethod
     def validate_full_name(cls, value: str) -> str:
-        value = value.strip()
 
+        if not value:
+            raise ValueError("Full name cannot be empty")
+        
+        value = value.strip()
         if not all(char.isalpha() or char == " " for char in value):
             raise ValueError(
                 "Full name must contain letters and spaces only"
@@ -24,25 +27,12 @@ class CandidateCreateRequest(BaseModel):  # str | None
 
         return value
 
-
-
-class CandidateUpdateRequest(BaseModel): # page fill data candidate ---> store database 
-    full_name: str | None = None
-    email: EmailStr | None = None
-    phone: str | None = None
-    education: str | None = None
-    portfolio: str | None = None
+class CandidateUpdateStatus(BaseModel): # page fill data candidate ---> store database 
+    model_config = ConfigDict(from_attributes=True)
     status: CandidateStatus | None = None
 
 
-class CandidateResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    full_name: str
-    email: EmailStr
-    phone: str | None
+class CandidateResponse(CandidateCreateRequest):
     created_at: datetime
-    education: str | None
-    portfolio: str | None
-    status: CandidateStatus
+    status:CandidateStatus | None = None
+    model_config = ConfigDict(from_attributes=True)

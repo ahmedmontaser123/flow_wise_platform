@@ -10,18 +10,17 @@ class CandidateRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create_candidate(        # await create_candidate(parm)  ## error curtoine objective
+    async def create_candidate(        
         self,
         candidate_data: CandidateCreateRequest,
     ) -> Candidate:
-
+                 
         candidate = Candidate(
             full_name=candidate_data.full_name,
             email=candidate_data.email,
             phone=candidate_data.phone,
             education=candidate_data.education,
             portfolio=candidate_data.portfolio,
-            status=candidate_data.status,
         )
 
         self.session.add(candidate)
@@ -35,12 +34,8 @@ class CandidateRepository:
         candidate_id: int,
     ) -> Candidate | None:
 
-        query = select(Candidate).where(
-            Candidate.id == candidate_id
-        )
-
+        query = select(Candidate).where( Candidate.id == candidate_id)
         result = await self.session.execute(query)
-
         return result.scalar_one_or_none()
 
     async def get_candidate_by_email(
@@ -48,36 +43,21 @@ class CandidateRepository:
         email: str,
     ) -> Candidate | None:
 
-        query = select(Candidate).where(
-            Candidate.email == email
-        )
-
+        query = select(Candidate).where(Candidate.email == email)
         result = await self.session.execute(query)
-
         return result.scalar_one_or_none()
 
-    async def update_candidate(
+    async def update_candidate_status(
         self,
         candidate: Candidate,
         candidate_data: CandidateUpdateRequest,
     ) -> Candidate:
-
-        candidate.full_name = candidate_data.full_name
-
-        candidate.email = candidate_data.email
-
-        candidate.phone = candidate_data.phone
-
-        candidate.education = candidate_data.education
-
-        candidate.portfolio = candidate_data.portfolio
-
+        
         candidate.status = candidate_data.status
-
         await self.session.commit()
         await self.session.refresh(candidate)
-
         return candidate
+
 
     async def delete_candidate(
         self,
@@ -86,5 +66,4 @@ class CandidateRepository:
 
         await self.session.delete(candidate)
         await self.session.commit()
-
         return True
