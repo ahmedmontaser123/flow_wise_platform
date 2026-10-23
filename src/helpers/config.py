@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     PGADMIN_DEFAULT_EMAIL:str
     PGADMIN_DEFAULT_PASSWORD:str
     PGADMIN_PORT:int = 5050
+    CHUNK_SIZE:int = 512000
 
 
     model_config = SettingsConfigDict(
