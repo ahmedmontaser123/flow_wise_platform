@@ -28,6 +28,7 @@ class JobRequirement(Base):
     last_edited = Column(
         DateTime, nullable=False , default=datetime.now(timezone.utc)
     )
+    
     schema_definition = Column(
         JSONB, nullable=False
     )    

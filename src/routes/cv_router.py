@@ -40,15 +40,12 @@ async def upload_file(request:Request,project_id:str,file:UploadFile,app_setting
            while chunk := await file.read(app_settings.CHUNK_SIZE):
                 await f.write(chunk)
 
-
-
     except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"signal": ResponseSignal.FILE_UPLOAD_FAILED.value}
         )
 
-    
 
     return JSONResponse(
             status_code=status.HTTP_201_CREATED,
@@ -56,6 +53,11 @@ async def upload_file(request:Request,project_id:str,file:UploadFile,app_setting
                        "file_id":file_id
                                      }
         )
+
+
+@cv_router.post("/process/{file_id}",response_class=JSONResponse)
+async def process_cv(file_id:str):
+    pass
 
     
     
