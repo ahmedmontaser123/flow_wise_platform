@@ -3,7 +3,7 @@ import os
 from fastapi import APIRouter, Depends, UploadFile, Form,status,Request
 from fastapi.responses import JSONResponse
 from helpers import get_settings,Settings
-from controllers import CvController,ProjectController
+from controllers import CvController,ProjectController,ProcessController
 from models.enums import ResponseSignal
 import aiofiles
 
@@ -55,9 +55,25 @@ async def upload_file(request:Request,project_id:str,file:UploadFile,app_setting
         )
 
 
-@cv_router.post("/process/{file_id}",response_class=JSONResponse)
-async def process_cv(file_id:str):
-    pass
+@cv_router.post("/process/{project_id}",response_class=JSONResponse)
+async def process_cv(project_id:str,file_id:str):
+    # get file path 
+    file_content = ProcessController(project_id=project_id).get_text_cv(file_id=file_id)
+
+    # validate file 
+
+    if file_content is None:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"signal": ResponseSignal.FILE_CONTENT_INVALID}
+        )
+    # go to process file 
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"signal": ResponseSignal.FILE_PROCESSED_SUCCESSFULLY.value, "file_content": file_content}
+    )
+     
 
     
     
