@@ -12,3 +12,9 @@ alembic==1.13.1
 langchain-community==0.4.2
 pymupdf==1.28.2
 aiofiles==25.1.0
+
+# HR auth
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+PyJWT==2.9.0
+email-validator==2.2.0

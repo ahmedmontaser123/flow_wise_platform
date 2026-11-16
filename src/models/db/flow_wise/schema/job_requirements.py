@@ -26,7 +26,7 @@ class JobRequirement(Base):
         index=True,
     )
     last_edited = Column(
-        DateTime, nullable=False , default=datetime.now(timezone.utc)
+        DateTime, nullable=False , default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
     
     schema_definition = Column(

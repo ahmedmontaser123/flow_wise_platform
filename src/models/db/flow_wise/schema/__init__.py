@@ -7,3 +7,4 @@ from .job import Job
 from .cv_file import CvFile
 from .cv_parsed import CvParsed
 from .job_requirements import JobRequirement
+from .job_title import JobTitle

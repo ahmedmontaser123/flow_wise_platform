@@ -28,8 +28,9 @@ class Candidate(Base):
         back_populates="candidate",
         cascade="all, delete-orphan",
     )
+    # applications are linked through cv_files (applications.cv_file_id)
     applications = relationship(
         "Application",
-        back_populates="candidate",
-        cascade="all, delete-orphan",
+        secondary="cv_files",
+        viewonly=True,
     )
