@@ -17,6 +17,17 @@ class Settings(BaseSettings):
     PGADMIN_DEFAULT_PASSWORD:str
     PGADMIN_PORT:int = 5050
     CHUNK_SIZE:int = 512000
+    GROQ_API_KEY:str = None
+    GROQ_API_URL:str = None
+    INPUT_MAX_CHARACTER:int = None
+    MAX_OUTPUT_TOKENS:int = None
+    TEMPERATURE:float = None
+    GENERATION_BACKEND:str = None
+    GENERATION_MODEL_ID:str = None
+    HUGGINGFACE_MODEL_NAME:str = None
+
+
+
 
 
     model_config = SettingsConfigDict(
