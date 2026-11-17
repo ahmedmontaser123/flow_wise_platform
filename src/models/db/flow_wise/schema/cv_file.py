@@ -17,7 +17,7 @@ class CvFile(Base):
         index=True,
     )
     file_path = Column(String(500), nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True) ,nullable=False ,default=lambda: datetime.now(timezone.utc))
 
     # relationships
     # candidates 1 -> N CV / CV 1 -> 1 parsed / CV 1 -> N Application
