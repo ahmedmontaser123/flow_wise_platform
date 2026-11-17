@@ -30,6 +30,8 @@ class Candidate(Base):
     )
     applications = relationship(
         "Application",
-        back_populates="candidate",
-        cascade="all, delete-orphan",
+        secondary="cv_files",
+        primaryjoin="Candidate.id == CvFile.candidate_id",
+        secondaryjoin="CvFile.id == Application.cv_file_id",
+        viewonly=True,
     )

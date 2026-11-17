@@ -4,7 +4,9 @@ from sqlalchemy import (
     DateTime,
     Enum as SQLEnum,
     ForeignKey,
+    Float,
     Integer,
+    JSON,
     UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
@@ -29,6 +31,8 @@ class Application(Base):
     cv_file_id = Column(Integer,ForeignKey("cv_files.id",ondelete="RESTRICT",onupdate="CASCADE",),nullable=False,index=True)
     job_id = Column(Integer,ForeignKey("jobs.id",ondelete="CASCADE",onupdate="CASCADE",),nullable=False,index=True)
     status = Column(SQLEnum(ApplicationStatus,name="application_status"),nullable=False,default=ApplicationStatus.NOT_RECEIVED)
+    ats_score = Column(Float, nullable=True)
+    score_breakdown = Column(JSON, nullable=True)
 
     created_at = Column(
         DateTime(timezone=True),
@@ -44,6 +48,14 @@ class Application(Base):
     )
 
     cv_file = relationship("CvFile",back_populates="applications")
+
+    candidate = relationship(
+        "Candidate",
+        secondary="cv_files",
+        primaryjoin="Application.cv_file_id == CvFile.id",
+        secondaryjoin="CvFile.candidate_id == Candidate.id",
+        viewonly=True,
+    )
 
     job = relationship(
         "Job",
