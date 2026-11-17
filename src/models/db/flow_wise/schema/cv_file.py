@@ -17,6 +17,7 @@ class CvFile(Base):
         index=True,
     )
     file_path = Column(String(500), nullable=False)
+
     created_at = Column(DateTime(timezone=True) ,nullable=False ,default=lambda: datetime.now(timezone.utc))
 
     # relationships

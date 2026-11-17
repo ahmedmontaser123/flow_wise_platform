@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     PGADMIN_DEFAULT_EMAIL:str
     PGADMIN_DEFAULT_PASSWORD:str
     PGADMIN_PORT:int = 5050
+    CHUNK_SIZE:int = 512000
 
     CV_STORAGE_PATH: Path = Path("../data_storage/cv_files")
 

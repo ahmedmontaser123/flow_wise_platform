@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
-from src.models.db.flow_wise.schema.hr_user import HRUser
+from models.db.flow_wise.schema.hr_user import HRUser
 from schema import HRUserCreate, HRUserUpdate
 from pydantic import EmailStr
 

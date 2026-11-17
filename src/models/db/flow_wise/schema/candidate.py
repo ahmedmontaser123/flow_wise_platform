@@ -28,6 +28,7 @@ class Candidate(Base):
         back_populates="candidate",
         cascade="all, delete-orphan",
     )
+    
     #applications = relationship(
     #    "Application",
     #    back_populates="candidate",

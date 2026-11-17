@@ -1,11 +1,22 @@
+
 from datetime import datetime
 from typing import Any
-from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    model_validator,
+)
+
+
+# Matches the JobRequirement model after migration aa7da30d5100
+# (type/content/required were replaced by the JSONB column schema_definition).
 class JobRequirementCreateRequest(BaseModel):
     job_id: int = Field(..., gt=0)
-    schema_definition: dict[str, Any] = Field(...) 
+    schema_definition: dict[str, Any] = Field(...)
     weight: float = Field(default=1.0, gt=0)
+
 
 class JobRequirementUpdateRequest(BaseModel):
     schema_definition: dict[str, Any] | None = None
@@ -13,14 +24,20 @@ class JobRequirementUpdateRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_non_nullable_fields(self):
-        non_nullable_fields = ("schema_definition", "weight")
+        non_nullable_fields = (
+            "schema_definition",
+            "weight",
+        )
+
         for field_name in non_nullable_fields:
             if (
                 field_name in self.model_fields_set
                 and getattr(self, field_name) is None
             ):
                 raise ValueError(f"{field_name} cannot be null.")
+
         return self
+
 
 class JobRequirementResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

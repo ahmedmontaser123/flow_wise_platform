@@ -29,7 +29,9 @@ class JobRequirement(Base):
         DateTime, 
         nullable=False, 
         default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+
     )
+    
     schema_definition = Column(
         JSONB, nullable=False
     )    
