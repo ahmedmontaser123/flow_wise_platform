@@ -86,7 +86,8 @@ def require_roles(*allowed: HRRole):
 
 
 require_admin = require_roles(HRRole.ADMIN)
-require_member = require_roles(HRRole.MEMBER)
+# التعديل هنا: نسمح للمدير بالمرور في أي مسار يتطلب عضو
+require_member = require_roles(HRRole.MEMBER, HRRole.ADMIN) 
 require_any_hr = require_roles(HRRole.ADMIN, HRRole.MEMBER)
 
 CurrentHRUser = Annotated[HRUser, Depends(require_any_hr)]

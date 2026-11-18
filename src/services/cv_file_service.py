@@ -1,6 +1,6 @@
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
-
+import hashlib
 from src.repositories.candidate_repository import CandidateRepository
 from src.repositories.cv_file_repository import CvFileRepository
 from src.repositories.cv_parsed_repository import CvParsedRepository
@@ -36,9 +36,31 @@ class CvFileService:
             if candidate is None:
                 raise ValueError("Candidate not found.")
 
-            # 2. Validate the uploaded file
             if not file.filename:
                 raise ValueError("A filename is required.")
+
+            # ========================================================
+            # 2. هندسة منع التكرار (Idempotency using SHA-256 Hash)
+            # ========================================================
+            
+            # أ. قراءة محتوى الملف بالكامل في الذاكرة لعمل البصمة
+            file_content = await file.read()
+            
+            # ب. توليد بصمة SHA-256 فريدة للملف
+            file_hash = hashlib.sha256(file_content).hexdigest()
+            
+            # ج. فحص قاعدة البيانات: هل هذه البصمة موجودة لهذا المرشح؟
+            # (نحتاج لاستدعاء دالة من الـ Repository تبحث بالبصمة)
+            existing_cv = await self.cv_file_repository.get_cv_by_hash(candidate_id, file_hash)
+            
+            if existing_cv:
+                # إذا كان موجوداً، نرفض الطلب فوراً ونمنع استهلاك الموارد
+                raise ValueError("This CV has already been uploaded by this candidate.")
+            
+            # د. الأهم: إعادة مؤشر قراءة الملف إلى الصفر ليتمكن الـ Storage من حفظه
+            await file.seek(0)
+            
+            # ========================================================
 
             # 3. Save the file to local storage
             saved_path = await self.storage.save(
@@ -47,10 +69,12 @@ class CvFileService:
             )
 
             # 4. Create the CV file database record
+            # ملاحظة: يجب تحديث CvFileCreateRequest ليقبل حقل file_hash
             cv_file = await self.cv_file_repository.create_cv_file(
                     cv_file_data=CvFileCreateRequest(
                     candidate_id=candidate_id,
                     file_path=saved_path,
+                    file_hash=file_hash # تمت إضافة البصمة هنا
                     )
            )
 
