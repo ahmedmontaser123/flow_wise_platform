@@ -1,7 +1,7 @@
 """add ATS scores to applications
 
 Revision ID: c2d4e8b7a901
-Revises: bdf653dcab64
+Revises: aa7da30d5100
 """
 
 from alembic import op
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 
 
 revision = "c2d4e8b7a901"
-down_revision = "bdf653dcab64"
+down_revision = "aa7da30d5100"
 branch_labels = None
 depends_on = None
 

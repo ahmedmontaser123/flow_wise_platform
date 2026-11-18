@@ -1,3 +1,4 @@
+from importlib.resources import path
 from pathlib import Path
 
 from pydantic_settings import BaseSettings,SettingsConfigDict
@@ -18,6 +19,7 @@ class Settings(BaseSettings):
     PGADMIN_PORT:int = 5050
     CHUNK_SIZE:int = 512000
 
+    CV_STORAGE_PATH: Path = Path("../data_storage/cv_files")
 
     model_config = SettingsConfigDict(
         env_file=SRC_DIR / ".env",

@@ -1,4 +1,6 @@
-from models.enums import RequirementType
+
+from datetime import datetime
+from typing import Any
 
 from pydantic import (
     BaseModel,
@@ -7,29 +9,23 @@ from pydantic import (
     model_validator,
 )
 
-from models.enums import RequirementType
 
-
+# Matches the JobRequirement model after migration aa7da30d5100
+# (type/content/required were replaced by the JSONB column schema_definition).
 class JobRequirementCreateRequest(BaseModel):
     job_id: int = Field(..., gt=0)
-    type: RequirementType
-    content: str = Field(..., min_length=1)
-    required: bool = True
+    schema_definition: dict[str, Any] = Field(...)
     weight: float = Field(default=1.0, gt=0)
 
 
 class JobRequirementUpdateRequest(BaseModel):
-    type: RequirementType | None = None
-    content: str | None = Field(None, min_length=1)
-    required: bool | None = None
+    schema_definition: dict[str, Any] | None = None
     weight: float | None = Field(None, gt=0)
 
     @model_validator(mode="after")
     def validate_non_nullable_fields(self):
         non_nullable_fields = (
-            "type",
-            "content",
-            "required",
+            "schema_definition",
             "weight",
         )
 
@@ -48,7 +44,6 @@ class JobRequirementResponse(BaseModel):
 
     id: int
     job_id: int
-    type: RequirementType
-    content: str
-    required: bool
+    schema_definition: dict[str, Any]
     weight: float
+    last_edited: datetime

@@ -1,4 +1,4 @@
-﻿from datetime import datetime , timezone
+from datetime import datetime , timezone
 
 from sqlalchemy import (
     Column,
@@ -32,15 +32,21 @@ class Job(Base):
         nullable=False,
         index=True,
     )
+    job_title_id = Column(
+        Integer,
+        ForeignKey("job_titles.id", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     created_at = Column(
         DateTime,
-        default=datetime.now(timezone.utc),
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         nullable=False,
     )
     updated_at = Column(
         DateTime,
-        default=datetime.now(timezone.utc),
-        onupdate=datetime.now(timezone.utc),
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         nullable=False,
     )
 
@@ -57,6 +63,7 @@ class Job(Base):
         uselist=False,
         viewonly=True,
     )
+    job_title = relationship("JobTitle")
     requirements = relationship(
         "JobRequirement",
         back_populates="job",

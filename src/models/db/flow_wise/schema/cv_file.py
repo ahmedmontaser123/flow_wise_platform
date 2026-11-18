@@ -1,4 +1,4 @@
-﻿from datetime import datetime , timezone
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
@@ -17,7 +17,11 @@ class CvFile(Base):
         index=True,
     )
     file_path = Column(String(500), nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.now(timezone.utc))
+
+    # <-- تمت إضافة عمود البصمة هنا ليتعرف عليه SQLAlchemy
+    file_hash = Column(String(64), nullable=True)
+
+    created_at = Column(DateTime(timezone=True) ,nullable=False ,default=lambda: datetime.now(timezone.utc))
 
     # relationships
     # candidates 1 -> N CV / CV 1 -> 1 parsed / CV 1 -> N Application

@@ -1,4 +1,4 @@
-﻿from .base import *
+from .base import *
 from .application import Application
 from .candidate import Candidate
 from .company import Company
@@ -7,3 +7,4 @@ from .job import Job
 from .cv_file import CvFile
 from .cv_parsed import CvParsed
 from .job_requirements import JobRequirement
+from .job_title import JobTitle
