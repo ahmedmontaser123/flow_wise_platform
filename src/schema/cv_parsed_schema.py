@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from . import ExperienceItem, EducationItem
 
 
 def _normalize_items(value, key: str) -> list[dict]:
@@ -21,33 +22,6 @@ def _normalize_items(value, key: str) -> list[dict]:
             items.append({key: entry})
 
     return items
-
-
-class ExperienceItem(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    title: str = ""
-    company: str = ""
-    duration: str = ""
-
-    @field_validator("title", "company", "duration", mode="before")
-    @classmethod
-    def normalize_text(cls, value):
-        return "" if value is None else str(value)
-
-
-class EducationItem(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    degree: str = ""
-    institution: str = ""
-    year: str = ""
-
-    @field_validator("degree", "institution", "year", mode="before")
-    @classmethod
-    def normalize_text(cls, value):
-        return "" if value is None else str(value)
-
 
 class ParsedCvData(BaseModel):
     """JSON structure returned by the cv extraction model."""

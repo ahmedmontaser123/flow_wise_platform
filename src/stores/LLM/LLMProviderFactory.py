@@ -36,6 +36,7 @@ class LLMProviderFactory:
 
            return HuggingFaceProvider(
                 model_name=self.setting.HUGGINGFACE_MODEL_NAME,
+                base_model_name=self.setting.HUGGINGFACE_BASE_MODEL_NAME,
                 default_generation_input_max_character= self.setting.INPUT_MAX_CHARACTER,
                 default_generation_max_output_of_tokens=self.setting.MAX_OUTPUT_TOKENS,
                 default_generation_temperature=self.setting.TEMPERATURE  

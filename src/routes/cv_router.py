@@ -60,7 +60,7 @@ async def upload_file(request:Request,project_id:str,file:UploadFile,app_setting
 
 @cv_router.post("/process/{project_id}",response_class=JSONResponse)
 async def process_cv(request:Request,project_id:str,file_id:str):
-    # the file id must be a plain file name inside the project directory
+
     if not file_id or os.path.basename(file_id) != file_id:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -69,7 +69,6 @@ async def process_cv(request:Request,project_id:str,file_id:str):
 
     process_controller = ProcessController(project_id=project_id)
 
-    # get and clean the text of the cv (blocking pdf parsing off the event loop)
     file_content = await run_in_threadpool(
         process_controller.get_text_cv,
         file_id

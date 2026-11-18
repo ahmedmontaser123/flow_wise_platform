@@ -15,14 +15,12 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# filled in during startup, kept None when the model could not be loaded
 app.generation_client = None
 
 
 async def startup_event():
 
     settings = get_settings()
-
     app.generation_client = None
 
     try:
@@ -39,8 +37,6 @@ async def startup_event():
         app.generation_client = generation_client
 
     except Exception:
-        # do not kill the api when the model cannot be downloaded/loaded,
-        # /api/v1/cv/process will answer 503 instead
         app.generation_client = None
         logger.exception("Generation model could not be loaded")
 

@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     GENERATION_BACKEND:str = None
     GENERATION_MODEL_ID:str = None
     HUGGINGFACE_MODEL_NAME:str = None
+    HUGGINGFACE_BASE_MODEL_NAME:str = None
 
 
 

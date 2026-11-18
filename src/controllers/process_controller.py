@@ -5,7 +5,7 @@ from .project_controller import ProjectController
 from models.enums import FileContent
 from langchain_community.document_loaders import PyMuPDFLoader
 from helpers import extract_json
-from models.cv_parsed_schema import ParsedCvData
+from schema import ParsedCvData
 import re
 import unicodedata
 
@@ -133,7 +133,6 @@ class ProcessController(BaseController):
             or 600
         )
 
-        # Build the NuExtract template prompt for the cleaned cv text.
         prompt = generation_client.construct_prompt(prompt=text, role=None)
 
         raw_response = generation_client.generate_text(
@@ -142,13 +141,11 @@ class ProcessController(BaseController):
         )
 
         if raw_response is None:
-            # The generation model is not loaded; the route reports this as 503.
             return None
 
         if not raw_response.strip():
             raise ValueError("The model returned an empty response")
 
-        # Raises ValueError when the model did not return a valid json object.
         data = extract_json(raw_response)
 
         try:

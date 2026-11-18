@@ -5,37 +5,10 @@ import json
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from ..LLMInterface import LLmInterface
 from peft import PeftModel
+from ..Prompts import *
 
 
-# Template expected by nimendraai/NuExtract-tiny-Resume-Data-Extractor.
-# Its shape matches models.cv_parsed_schema.ParsedCvData.
-NUEXTRACT_TEMPLATE = {
-    "name": "",
-    "email": "",
-    "phone": "",
-    "website": "",
-    "skills": [""],
-    "experience": [
-        {
-            "title": "",
-            "company": "",
-            "duration": ""
-        }
-    ],
-    "education": [
-        {
-            "degree": "",
-            "institution": "",
-            "year": ""
-        }
-    ],
-    "other_details": [""]
-}
-
-NUEXTRACT_INPUT_MARKER = "<|input|>"
-NUEXTRACT_OUTPUT_MARKER = "<|output|>"
-NUEXTRACT_TEXT_MARKER = "### Text:\n"
-
+# Fallbacks used when the caller does not provide generation limits.
 DEFAULT_MAX_INPUT_TOKENS = 2048
 DEFAULT_MAX_NEW_TOKENS = 600
 
@@ -45,6 +18,7 @@ class HuggingFaceProvider(LLmInterface):
     def __init__(
         self,
         model_name: str,
+        base_model_name: str = None,
         default_generation_input_max_character: int = 1000,
         default_generation_max_output_of_tokens: int = DEFAULT_MAX_NEW_TOKENS,
         default_generation_temperature: float = 0.1,
@@ -52,6 +26,7 @@ class HuggingFaceProvider(LLmInterface):
     ):
 
         self.model_name = model_name
+        self.base_model_name = base_model_name
 
         # Generation constraints
         self.default_generation_input_max_character = default_generation_input_max_character
@@ -75,7 +50,19 @@ class HuggingFaceProvider(LLmInterface):
         self.logger = logging.getLogger(__name__)
 
 
-    def set_generation_model(self, model_id: str):
+    def set_generation_model(self, model_id: str = None):
+
+        model_id = model_id or self.model_name
+
+        if not model_id:
+            raise ValueError(
+                "HUGGINGFACE_MODEL_NAME (LoRA adapter) is not configured"
+            )
+
+        if not self.base_model_name:
+            raise ValueError(
+                "HUGGINGFACE_BASE_MODEL_NAME is not configured"
+            )
 
         self.generation_model_id = model_id
 
@@ -86,10 +73,8 @@ class HuggingFaceProvider(LLmInterface):
             )
 
             # Load base model
-            base_model_id = "numind/NuExtract-tiny-v1.5"
-
             base_model = AutoModelForCausalLM.from_pretrained(
-                base_model_id,
+                self.base_model_name,
                 torch_dtype=self.dtype,
                 trust_remote_code=True
             ).to(self.device)
@@ -140,11 +125,12 @@ class HuggingFaceProvider(LLmInterface):
         )
 
     def _prepare_inputs(self, prompt: str) -> dict:
-        """Tokenize the prompt without cutting the template or the marker.
-
+        """
+        Tokenize the prompt without cutting the template or the marker.
         The input limit applies to the whole prompt. Only the CV text itself
         is truncated so the NuExtract template and the closing ``<|output|>``
         marker always reach the model.
+        
         """
 
         max_input_tokens = (
@@ -205,13 +191,7 @@ class HuggingFaceProvider(LLmInterface):
             )
         }
 
-    def generate_text(
-        self,
-        prompt: str,
-        chat_history: list = None,
-        max_output_tokens: int = None,
-        temperature: float = None
-    ):
+    def generate_text(self,prompt: str,chat_history: list = None,max_output_tokens: int = None,temperature: float = None):
 
         if self.model is None or self.tokenizer is None:
             self.logger.error("Generation model not loaded")
@@ -224,7 +204,6 @@ class HuggingFaceProvider(LLmInterface):
         )
 
         # temperature and chat_history are accepted for interface
-        # compatibility. Resume extraction always runs deterministically.
         prompt = self.construct_prompt(prompt)
         inputs = self._prepare_inputs(prompt)
 
