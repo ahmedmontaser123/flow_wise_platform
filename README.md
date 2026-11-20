@@ -1,75 +1,104 @@
-<div align="center">
-
 # FlowWise
 
-**AI-Powered Recruitment Platform for Intelligent CV Screening & Candidate Matching**
+**AI-assisted recruitment backend: CV ingestion, HR workspace, job postings and a candidate application pipeline.**
 
-[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110.2-009688.svg)](https://fastapi.tiangolo.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-316192.svg)](https://www.postgresql.org/)
-[![pgvector](https://img.shields.io/badge/pgvector-0.8.0-blue.svg)](https://github.com/pgvector/pgvector)
-[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0.29-red.svg)](https://www.sqlalchemy.org/)
-[![Alembic](https://img.shields.io/badge/Alembic-1.13.1-orange.svg)](https://alembic.sqlalchemy.org/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://docs.docker.com/compose/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
+FastAPI · PostgreSQL 17 · SQLAlchemy 2 (async) · Alembic · JWT + RBAC · Docker
 
-[Overview](#overview) • [Features](#features) • [Tech Stack](#tech-stack) • [Architecture](#architecture) • [Database Schema](#database-schema) • [Getting Started](#getting-started) • [API Reference](#api-reference) • [Roadmap](#roadmap) • [Contributing](#contributing) • [Team](#team) • [License](#license)
+> **Status:** the project is under active refactoring. Read
+> [Repository status](#repository-status) before running the start commands —
+> the working tree currently needs a small set of fixes before the API boots.
 
-</div>
+---
+
+## Table of contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Tech stack](#tech-stack)
+- [Architecture](#architecture)
+- [Project structure](#project-structure)
+- [API reference](#api-reference)
+- [Roles and permissions](#roles-and-permissions)
+- [Getting started](#getting-started)
+- [Environment variables](#environment-variables)
+- [Database and migrations](#database-and-migrations)
+- [Repository status](#repository-status)
+- [Cleanup checklist](#cleanup-checklist)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Team](#team)
+- [License](#license)
 
 ---
 
 ## Overview
 
-FlowWise is an AI-powered recruitment platform designed to streamline the hiring process by automating CV ingestion, validation, and intelligent candidate-job matching. Built with a modular FastAPI backend, FlowWise provides HR teams with powerful tools to efficiently screen candidates against job requirements using modern AI techniques.
+FlowWise is the backend of a recruitment platform with three actors:
 
-The platform leverages PostgreSQL with pgvector for semantic search capabilities, enabling intelligent matching between candidate profiles and job descriptions. With robust data models, repository patterns, and a scalable architecture, FlowWise is built to handle the complexities of modern recruitment workflows.
+- **Candidates** browse published jobs and submit an application with a CV.
+- **HR Members** maintain a job-title catalog, create and publish postings, and
+  review applicants through a hiring pipeline.
+- **HR Admins** own the company, manage HR Member accounts (create, approve,
+  decline, disable, delete) and have read-only oversight of postings and
+  applicants.
+
+The backend is a modular FastAPI service with routers → controllers → repositories,
+async SQLAlchemy models and versioned Alembic migrations. Authentication is
+JWT-based with a role/company claim set, and every HR request re-loads the user
+from the database so approvals, disabling and password changes take effect
+immediately.
 
 ---
 
 ## Features
 
-### Implemented
+### Implemented and working
 
-| Feature | Description | Status |
-| --- | --- | --- |
-| **CV Upload & Validation** | Upload PDF CVs with comprehensive validation (file type, size, content integrity, and image-only detection). | ✅ Implemented |
-| **Project-Based Organization** | Organize CV uploads by project ID with automatic directory structure creation. | ✅ Implemented |
-| **Robust Data Models** | Complete relational schema for companies, HR users, jobs, candidates, applications, and CV parsing. | ✅ Implemented |
-| **Repository Pattern** | Clean data access layer with CRUD operations for all core entities. | ✅ Implemented |
-| **Database Migrations** | Version-controlled schema management using Alembic with async PostgreSQL support. | ✅ Implemented |
-| **Docker Infrastructure** | Containerized PostgreSQL with pgvector and pgAdmin for easy local development. | ✅ Implemented |
-| **Configuration Management** | Environment-based configuration using Pydantic Settings. | ✅ Implemented |
+| Feature | Description |
+| --- | --- |
+| HR Admin registration | Creates a company and its single HR Admin in one transaction, returns a JWT. |
+| JWT authentication | Login, `me`, password change; bcrypt hashing, 72-byte rule, dummy-hash comparison against user enumeration, `token_version` invalidation. |
+| RBAC | `ADMIN` / `MEMBER` roles, partial unique index enforcing one admin per company, router-level dependencies. |
+| HR Member lifecycle | Create (PENDING) → approve / decline / disable / delete, with guards around accounts that own postings. |
+| Company profile | Read and update name, description, address, phone, email with uniqueness checks. |
+| Job-title catalog | CRUD, case-insensitive uniqueness per company, delete blocked while used by a posting. |
+| Postings | Create as DRAFT, edit, publish, close; company-scoped listing with filters and applicant counts. |
+| Applicant review | List applicants per posting, applicant detail with parsed CV payload and allowed next statuses, pipeline transitions. |
+| Public application | Multipart apply endpoint: find-or-create candidate by email, SHA-256 CV deduplication, application record. |
+| CV upload (legacy) | PDF validation (type, size, extractable text) with project-based local storage. |
+| Database | Async engine, Alembic migrations, typed enums, JSONB job requirements. |
+| Docker | PostgreSQL 17 + pgvector image and pgAdmin via Compose. |
 
-### Planned (Roadmap)
+### Partial / needs work
 
-| Feature | Description | Status |
-| --- | --- | --- |
-| **AI-Powered CV Parsing** | Intelligent extraction of candidate information using LangChain and LLMs. | 🚧 Planned |
-| **Semantic Job-Candidate Matching** | Vector embeddings for intelligent matching based on skills, experience, and requirements. | 🚧 Planned |
-| **Application Workflow Management** | Track candidate applications through screening, interviews, offers, and hiring stages. | 🚧 Planned |
-| **HR Authentication & Authorization** | Secure access control for HR users and company management. | 🚧 Planned |
-| **Job Requirements Engine** | Dynamic JSONB-based job requirement schema with weighted matching. | 🚧 Planned |
-| **Analytics Dashboard** | Insights and metrics for recruitment pipelines and hiring performance. | 🚧 Planned |
+| Feature | State |
+| --- | --- |
+| Public job listing | Endpoint exists but the status filter compares `"published"` against a column that stores `PUBLISHED`, so it always returns an empty list. |
+| Job requirements API | Model, JSONB column and repository exist; no HTTP routes. |
+| CV processing | `POST /api/v1/cv/process/{file_id}` is an empty stub. |
+| CV download | HR receives a `file_path` string but there is no authenticated endpoint to fetch the file. |
+| Semantic search / matching | pgvector is available in the database image, but no embedding column, extension setup or matching code exists. |
+| Legacy candidate API | `/api/candidates` and `/api/cv-files` are wired to a service layer that is currently missing from the working tree (see [Repository status](#repository-status)). |
 
 ---
 
-## Tech Stack
+## Tech stack
 
-| Category | Technology | Version | Purpose |
-| --- | --- | --- | --- |
-| **Framework** | [FastAPI](https://fastapi.tiangolo.com/) | 0.110.2 | High-performance async web framework |
-| **Server** | [Uvicorn](https://www.uvicorn.org/) | 0.29.0 | ASGI server with standard extras |
-| **Database** | [PostgreSQL](https://www.postgresql.org/) | 17 | Primary relational database |
-| **Vector Extension** | [pgvector](https://github.com/pgvector/pgvector) | 0.8.0 | Vector similarity search for AI matching |
-| **ORM** | [SQLAlchemy](https://www.sqlalchemy.org/) | 2.0.29 | Async ORM with PostgreSQL support |
-| **Database Driver** | [asyncpg](https://github.com/MagicStack/asyncpg) | 0.29.0 | High-performance async PostgreSQL driver |
-| **Migrations** | [Alembic](https://alembic.sqlalchemy.org/) | 1.13.1 | Database schema version control |
-| **Validation** | [Pydantic Settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) | 2.10.1 | Environment configuration and validation |
-| **AI/ML** | [LangChain Community](https://python.langchain.com/) | 0.4.2 | LLM integration framework |
-| **PDF Processing** | [PyMuPDF](https://pymupdf.readthedocs.io/) | 1.28.2 | PDF parsing and text extraction |
-| **File Handling** | [aiofiles](https://github.com/Tinche/aiofiles) | 25.1.0 | Async file operations |
-| **Containerization** | [Docker Compose](https://docs.docker.com/compose/) | - | Multi-container orchestration |
+| Category | Technology |
+| --- | --- |
+| Framework | FastAPI 0.110.2 |
+| ASGI server | Uvicorn 0.29.0 |
+| Database | PostgreSQL 17 (`pgvector/pgvector:0.8.0-pg17` image) |
+| ORM | SQLAlchemy 2.0.29 (async, `asyncpg` 0.29.0) |
+| Migrations | Alembic 1.13.1 |
+| Validation / settings | Pydantic 2 + pydantic-settings 2.10.1 |
+| Auth | PyJWT 2.9.0, passlib 1.7.4, bcrypt 4.0.1 |
+| PDF | PyMuPDF 1.28.2, langchain-community parsers |
+| Files | aiofiles 25.1.0, python-multipart 0.0.9 |
+| Infrastructure | Docker Compose (PostgreSQL + pgAdmin) |
+
+Runtime target: **Python 3.12** (pin this; 3.13 is not validated with the pinned
+dependencies).
 
 ---
 
@@ -77,448 +106,465 @@ The platform leverages PostgreSQL with pgvector for semantic search capabilities
 
 ```mermaid
 graph TB
-    Client[Client/HR Interface] --> API[FastAPI Application]
-    API --> Router[API Routers]
-    Router --> Controller[Controllers]
+    Client[Web / mobile client] --> API[FastAPI app]
+    API --> Router[Routers]
+    Router --> Deps[Dependencies: auth, DB session]
+    Deps --> Controller[Controllers / services]
     Controller --> Repo[Repositories]
-    Repo --> DB[(PostgreSQL + pgvector)]
-    
-    subgraph "Controllers Layer"
-        CVController[CV Controller]
-        ProjectController[Project Controller]
-        BaseController[Base Controller]
-    end
-    
-    subgraph "Storage"
-        FileSystem[Local File System<br/>assets/files/]
-    end
-    
-    Controller --> FileSystem
-    
-    subgraph "Infrastructure"
-        Docker[Docker Compose]
-        pgAdmin[pgAdmin]
-    end
-    
-    Docker --> DB
-    Docker --> pgAdmin
+    Repo --> DB[(PostgreSQL 17 + pgvector)]
+    Controller --> Storage[(Local CV storage)]
+    App[main.py] --> Router
 ```
 
-### Request Flow
+Request flow:
 
-1. **Client** sends HTTP request to FastAPI endpoint
-2. **Router** (`routes/`) handles routing and dependency injection
-3. **Controller** (`controllers/`) contains business logic for validation and processing
-4. **Repository** (`repositories/`) manages database operations using SQLAlchemy
-5. **Models** (`models/`) define database schema and enums
-6. **Response** returned as JSON through FastAPI
+1. Router receives the request and resolves dependencies (JWT → `HRUser`, DB session).
+2. Controller/service applies business rules and company scoping.
+3. Repository builds the SQLAlchemy query and flushes.
+4. The controller commits the transaction.
+5. Pydantic schema serializes the response.
+
+Design rules the code follows (where it is consistent):
+
+- Every HR lookup is scoped by `company_id`; a foreign resource returns **404**, not 403, so IDs cannot be probed.
+- Repositories only `flush()`; controllers own `commit()`/`rollback()`.
+- The role in the JWT is never trusted alone — the user is reloaded and checked against `role`, `company_id`, `token_version` and `status`.
 
 ---
 
-## Project Structure
+## Project structure
+
+Current tree (after the cleanup in [Cleanup checklist](#cleanup-checklist)):
 
 ```plaintext
-Flow_wise/
-├── project/
-│   ├── Docker/                      # Docker configuration
-│   │   ├── docker-compose.yml       # PostgreSQL + pgvector + pgAdmin
-│   │   ├── .env.example            # Docker environment template
-│   │   └── .gitignore
-│   ├── src/                        # Application source code
-│   │   ├── assets/                 # Static assets and uploaded files
-│   │   │   └── files/              # Project-organized CV storage
-│   │   ├── controllers/            # Business logic layer
-│   │   │   ├── Base_controller.py  # Base controller with utilities
-│   │   │   ├── cv_controller.py    # CV validation and processing
-│   │   │   └── project_controller.py # Project path management
-│   │   ├── helpers/                # Utility functions
-│   │   │   └── config.py           # Settings configuration
-│   │   ├── main.py                 # FastAPI application entry point
-│   │   ├── models/                 # Data models and database
-│   │   │   ├── db/                 # Database configuration
-│   │   │   │   ├── connection_database.py
-│   │   │   │   └── flow_wise/      # FlowWise schema
-│   │   │   │       ├── alembic/    # Database migrations
-│   │   │   │       └── schema/     # SQLAlchemy models
-│   │   │   └── enums/              # Enumeration types
-│   │   ├── repositories/           # Data access layer
-│   │   │   ├── candidate_repository.py
-│   │   │   ├── company_repository.py
-│   │   │   ├── hr_users_repository.py
-│   │   │   ├── job_repository.py
-│   │   │   └── job_requirement_repository.py
-│   │   ├── routes/                 # API route definitions
-│   │   │   └── cv_router.py        # CV upload endpoints
-│   │   ├── schema/                 # Pydantic schemas
-│   │   │   ├── candidate_schema.py
-│   │   │   ├── company_schema.py
-│   │   │   ├── hr_user_schema.py
-│   │   │   ├── job_schema.py
-│   │   │   └── job_requirement_schema.py
-│   │   ├── .env.example            # Application environment template
-│   │   └── requirements.txt        # Python dependencies
-│   ├── .gitignore
-│   ├── LICENSE                     # Apache License 2.0
-│   └── README.md
-└── .vscode/                        # VS Code configuration
+project/
+├── Docker/
+│   ├── docker-compose.yml        # PostgreSQL 17 + pgvector, pgAdmin
+│   ├── .env.example
+│   └── .gitignore
+├── src/
+│   ├── main.py                   # FastAPI app, CORS, router registration
+│   ├── requirements.txt
+│   ├── .env.example
+│   ├── assets/                   # legacy CV storage (assets/files/{project_id}/)
+│   ├── controllers/              # business logic
+│   │   ├── Base_controller.py
+│   │   ├── cv_controller.py
+│   │   ├── project_controller.py
+│   │   ├── candidate_controller.py
+│   │   ├── cv_file_controller.py
+│   │   ├── job_controller.py
+│   │   ├── hr_auth_controller.py
+│   │   ├── hr_admin_controller.py
+│   │   └── hr_member_controller.py
+│   ├── helpers/                  # config, security, RBAC, errors, time utils
+│   ├── models/
+│   │   ├── db/
+│   │   │   ├── connection_database.py
+│   │   │   └── flow_wise/
+│   │   │       ├── alembic/      # env.py + versions/
+│   │   │       └── schema/       # SQLAlchemy models
+│   │   └── enums/
+│   ├── repositories/             # data access
+│   ├── routes/                   # API routers
+│   ├── schema/                   # Pydantic request/response models
+│   └── tests/                    # currently unversioned and out of date
+├── .gitignore
+├── LICENSE
+└── README.md
 ```
+
+Runtime uploads do **not** belong under `src/`. The target is a single gitignored
+`data/` directory outside the package (see the cleanup checklist).
 
 ---
 
-## Database Schema
+## API reference
 
-FlowWise uses a normalized relational schema with PostgreSQL. Here's the entity relationship diagram:
+Base URL: `http://localhost:8000`. Interactive docs: `/docs`, `/redoc`.
 
-```mermaid
-erDiagram
-    COMPANY {
-        bigint id PK
-        varchar company_name UK
-        text description
-        varchar address
-        varchar phone
-        varchar email UK
-    }
-    
-    HR_USER {
-        int id PK
-        int company_id FK
-        varchar full_name
-        varchar email UK
-        varchar password
-        datetime created_at
-    }
-    
-    JOB {
-        int id PK
-        varchar title
-        text description
-        varchar location
-        enum employment_type
-        enum experience_level
-        enum status
-        int created_by FK
-        datetime created_at
-        datetime updated_at
-    }
-    
-    JOB_REQUIREMENT {
-        int id PK
-        int job_id FK
-        datetime last_edited
-        jsonb schema_definition
-        float weight
-    }
-    
-    CANDIDATE {
-        int id PK
-        varchar full_name
-        varchar email UK
-        varchar phone
-        datetime created_at
-        varchar education
-        varchar portfolio
-        enum status
-    }
-    
-    CV_FILE {
-        int id PK
-        int candidate_id FK
-        varchar file_path
-        datetime created_at
-    }
-    
-    CV_PARSED {
-        int id PK
-        int cv_file_id FK UK
-        json parsed_data
-        enum status
-        datetime created_at
-    }
-    
-    APPLICATION {
-        int id PK
-        int cv_file_id FK
-        int job_id FK
-        enum status
-        datetime created_at
-        datetime updated_at
-    }
-    
-    COMPANY ||--o{ HR_USER : "employs"
-    HR_USER ||--o{ JOB : "creates"
-    JOB ||--o{ JOB_REQUIREMENT : "has"
-    CANDIDATE ||--o{ CV_FILE : "submits"
-    CV_FILE ||--o| CV_PARSED : "parsed into"
-    CV_FILE ||--o{ APPLICATION : "used in"
-    JOB ||--o{ APPLICATION : "receives"
-    APPLICATION }o--|| CV_FILE : "references"
-    APPLICATION }o--|| JOB : "for"
-```
+### Health
 
-### Key Relationships
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| GET | `/` | none | Welcome message. |
 
-- **Company** has many **HR Users** and can be associated with jobs through HR users
-- **HR Users** create and manage **Jobs**
-- **Jobs** have multiple **Job Requirements** with flexible JSONB schema definitions
-- **Candidates** can submit multiple **CV Files**
-- **Each CV File** can be **Parsed** (one-to-one) and used in **Applications**
-- **Applications** link **CV Files** to **Jobs** with a unique constraint on `(cv_file_id, job_id)`
+### HR authentication — `/api/v1/hr/auth`
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| POST | `/register-admin` | none | Create a company + its ADMIN. Controlled by `ALLOW_ADMIN_REGISTRATION`. |
+| POST | `/login` | none | OAuth2 password form; `username` = email. Returns JWT + role. |
+| GET | `/me` | any HR | Current account. |
+| POST | `/change-password` | any HR | Verify current password, bump `token_version`, return a new JWT. |
+
+### HR Admin — `/api/v1/hr/admin`
+
+All routes require `role = admin`.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/company` | Own company profile. |
+| PATCH | `/company` | Update profile (name/email uniqueness enforced). |
+| POST | `/members` | Create a MEMBER account (starts PENDING). |
+| GET | `/members` | Paginated members; `status`, `search`, `limit`, `offset`. |
+| GET | `/members/{member_id}` | Member detail. |
+| PATCH | `/members/{member_id}` | Update name/email; sending `password` resets it and invalidates sessions. |
+| POST | `/members/{member_id}/approve` | PENDING → ACTIVE. |
+| POST | `/members/{member_id}/decline` | PENDING → DECLINED. |
+| POST | `/members/{member_id}/disable` | ACTIVE → DISABLED. |
+| DELETE | `/members/{member_id}` | Delete; refused if the member owns postings. |
+| GET | `/postings` | Read-only postings list (with applicant counts). |
+| GET | `/postings/{job_id}` | Read-only posting detail. |
+| GET | `/postings/{job_id}/applicants` | Applicant list. |
+| GET | `/applicants/{application_id}` | Applicant detail incl. parsed CV. |
+
+### HR Member — `/api/v1/hr`
+
+Requires `member` or `admin`.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| POST | `/job-titles` | Create a job title. |
+| GET | `/job-titles` | List (search, pagination). |
+| GET | `/job-titles/{title_id}` | Detail. |
+| PATCH | `/job-titles/{title_id}` | Update. |
+| DELETE | `/job-titles/{title_id}` | Delete; blocked while used by a posting. |
+| POST | `/postings` | Create a posting as DRAFT. |
+| GET | `/postings` | List; `status`, `job_title_id`, `mine`, pagination. |
+| GET | `/postings/{job_id}` | Detail. |
+| PATCH | `/postings/{job_id}` | Update; closed postings are immutable. |
+| POST | `/postings/{job_id}/open` | Publish. |
+| POST | `/postings/{job_id}/close` | Close. |
+| GET | `/postings/{job_id}/applicants` | Applicants; `status`, pagination. |
+| GET | `/applicants/{application_id}` | Applicant detail. |
+| PATCH | `/applicants/{application_id}/status` | Move forward in the pipeline or reject. |
+
+Pipeline: `not_received → received → screened → shortlisted → interview → offer → hired`,
+with `rejected` allowed at any non-final step. `hired` and `rejected` are terminal.
+
+### Public jobs — `/api/v1/jobs`
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| POST | `/{job_id}/apply` | none | Multipart application: `full_name`, `email`, `phone`, `education`, `portfolio`, `cv_file`. Creates/reuses candidate by email, deduplicates CV by SHA-256, creates an application. |
+
+### CV — `/api/v1/cv`
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| POST | `/upload/{project_id}` | none | Validate a PDF CV and store it under the project folder. |
+| POST | `/process/{file_id}` | none | **Stub** — not implemented. |
+
+### Candidates and CV files (legacy)
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| POST | `/api/candidates/` | none | Create candidate. |
+| GET | `/api/candidates/{candidate_id}` | none | Candidate by ID. |
+| GET | `/api/candidates/email/{email}` | none | Candidate by email. |
+| PATCH | `/api/candidates/{candidate_id}/status` | none | Update candidate status. |
+| DELETE | `/api/candidates/{candidate_id}` | none | Delete candidate. |
+| POST | `/api/cv-files/upload/{candidate_id}` | none | Upload a CV through the service/storage layer. |
+
+These routes are unauthenticated and currently broken. Either protect and keep
+them, or delete them in favour of the public apply flow (recommended).
+
+### Jobs (legacy) — `/api/jobs`
+
+Superseded by `/api/v1/hr/postings`. Do not build new clients against this API.
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| POST | `/api/jobs` | HR | Create a job + first requirement. |
+| GET | `/api/jobs` | HR | List jobs — **not company-scoped**. |
+| PATCH | `/api/jobs/{job_id}/status` | HR | Update status — **no ownership check**. |
+| GET | `/api/jobs/{job_id}/with-applications` | HR | Job + applications — **no company check**. |
+| GET | `/api/jobs/public` | none | Published jobs — **currently always empty** (enum bug). |
 
 ---
 
-## Getting Started
+## Roles and permissions
+
+| Capability | Public | Member | Admin |
+| --- | --- | --- | --- |
+| Browse published jobs | yes | yes | yes |
+| Apply to a job | yes | yes | yes |
+| Manage job titles / postings | no | yes | yes |
+| Review applicants and move pipeline | no | yes | yes |
+| Read postings / applicants (oversight) | no | yes | yes |
+| Manage company profile | no | no | yes |
+| Create / approve / decline / disable / delete members | no | no | yes |
+| Register a new company | controlled by `ALLOW_ADMIN_REGISTRATION` | — | — |
+
+---
+
+## Getting started
 
 ### Prerequisites
 
-Before you begin, ensure you have the following installed:
+- Python 3.12
+- Docker + Docker Compose
+- Git
 
-- [Git](https://git-scm.com/) - Version control
-- [Python 3.12](https://www.python.org/downloads/) - Runtime environment
-- [Docker](https://www.docker.com/) - Containerization platform
-- [Conda](https://docs.conda.io/) (optional) - Environment management
-
-### Installation
-
-#### 1. Clone the Repository
+### 1. Clone and create an environment
 
 ```bash
 git clone https://github.com/ahmedmontaser123/flow_wise_platform.git
 cd flow_wise_platform/project
-```
 
-#### 2. Create Python Environment
-
-**Using Conda (Recommended):**
-
-```bash
-# Windows/Linux/WSL
-conda create -n flow-wise python=3.12 -y
-conda activate flow-wise
-```
-
-**Using venv:**
-
-```bash
-# Windows (PowerShell)
-py -3.12 -m venv .venv
-.venv\Scripts\Activate.ps1
-
-# Linux/WSL
 python3.12 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install --upgrade pip
+pip install -r src/requirements.txt
 ```
 
-#### 3. Configure Environment Variables
-
-Copy the example environment files and fill in your values:
+### 2. Configure environment files
 
 ```bash
-# Windows (PowerShell)
-Copy-Item src/.env.example src/.env
-Copy-Item Docker/.env.example Docker/.env
-
-# Linux/WSL
 cp src/.env.example src/.env
 cp Docker/.env.example Docker/.env
 ```
 
-Edit `src/.env` with your configuration:
+Edit both files; the database credentials must match. See
+[Environment variables](#environment-variables).
 
-```env
-# PostgreSQL / pgvector
-POSTGRES_USER=your_db_user
-POSTGRES_PASSWORD=your_strong_password
-POSTGRES_DB=flow_wise
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-
-# pgAdmin
-PGADMIN_DEFAULT_EMAIL=admin@example.com
-PGADMIN_DEFAULT_PASSWORD=your_pgadmin_password
-PGADMIN_PORT=5050
-
-# File upload
-CHUNK_SIZE=512000
-```
-
-Edit `Docker/.env` with matching database credentials:
-
-```env
-POSTGRES_USER=your_db_user
-POSTGRES_PASSWORD=your_strong_password
-POSTGRES_DB=flow_wise
-PGADMIN_DEFAULT_EMAIL=admin@example.com
-PGADMIN_DEFAULT_PASSWORD=your_pgadmin_password
-```
-
-> ⚠️ **Important:** Never commit `.env` files to version control. They are already included in `.gitignore`.
-
-#### 4. Start Docker Services
-
-From the `project` directory:
+### 3. Start the database
 
 ```bash
 docker compose --env-file src/.env -f Docker/docker-compose.yml up -d
-```
-
-Verify services are running:
-
-```bash
 docker compose --env-file src/.env -f Docker/docker-compose.yml ps
 ```
 
-**Default Service Endpoints:**
 - PostgreSQL: `localhost:5432`
 - pgAdmin: `http://localhost:5050`
 
-#### 5. Install Dependencies
+### 4. Apply migrations
+
+Run from the repository root — the Alembic config uses a path relative to the
+working directory:
 
 ```bash
-python -m pip install --upgrade pip
-pip install -r src/requirements.txt
+alembic -c src/models/db/flow_wise/alembic.ini upgrade head
 ```
 
-#### 6. Run Database Migrations
+> The configuration in `src/models/db/flow_wise/alembic.ini` points at
+> `script_location = src/models/db/flow_wise/alembic`. Running `alembic` from
+> inside that folder (as older docs suggested) will not find the scripts.
 
-Navigate to the Alembic directory and apply migrations:
+### 5. Run the API
+
+From the repository root:
 
 ```bash
-cd src/models/db/flow_wise
-alembic upgrade head
-cd ../../../../
+uvicorn main:app --app-dir src --reload --host 0.0.0.0 --port 8000
 ```
 
-#### 7. Run the Application
+- API: `http://localhost:8000`
+- Swagger: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
 
-From the `src` directory:
-
-```bash
-cd src
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-
-The API will be available at:
-- **API Base URL:** `http://localhost:8000`
-- **Interactive Docs (Swagger):** `http://localhost:8000/docs`
-- **Alternative Docs (ReDoc):** `http://localhost:8000/redoc`
-
-#### 8. Stop Services
-
-When you're done:
+### 6. Stop
 
 ```bash
 docker compose --env-file src/.env -f Docker/docker-compose.yml down
-```
-
-To remove volumes as well (this will delete all data):
-
-```bash
-docker compose --env-file src/.env -f Docker/docker-compose.yml down -v
+# add -v to delete the database volume
 ```
 
 ---
 
-## API Reference
+## Environment variables
 
-### Current Endpoints
+`src/.env` (read by `helpers/config.py` and `helpers/hr_auth_settings.py`):
 
-| Method | Endpoint | Description | Status |
+| Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `POST` | `/api/v1/cv/upload/{project_id}` | Upload and validate a PDF CV for a specific project | ✅ Live |
+| `POSTGRES_USER` | yes | — | Database user. |
+| `POSTGRES_PASSWORD` | yes | — | Database password. |
+| `POSTGRES_DB` | yes | — | Database name. |
+| `POSTGRES_HOST` | no | `localhost` | Database host. |
+| `POSTGRES_PORT` | no | `5432` | Database port. |
+| `PGADMIN_DEFAULT_EMAIL` | yes* | — | pgAdmin login (not used by the API). |
+| `PGADMIN_DEFAULT_PASSWORD` | yes* | — | pgAdmin password (not used by the API). |
+| `PGADMIN_PORT` | no | `5050` | pgAdmin port (not used by the API). |
+| `CHUNK_SIZE` | no | `512000` | Upload stream chunk size in bytes. |
+| `JWT_SECRET_KEY` | yes | — | Signing key, minimum 32 chars. Generate with `python -c "import secrets; print(secrets.token_urlsafe(48))"`. |
+| `JWT_ALGORITHM` | no | `HS256` | JWT algorithm. |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | no | `60` | Access-token lifetime. |
+| `ALLOW_ADMIN_REGISTRATION` | no | `true` | Set to `false` once real companies exist. |
+| `CV_STORAGE_PATH` | no | `../data_storage/cv_files` | CV storage directory (see the cleanup checklist). |
 
-### CV Upload Details
+\* Required by the current `Settings` model even though only Docker uses them;
+merge them into one settings class and drop the requirement.
 
-**Endpoint:** `POST /api/v1/cv/upload/{project_id}`
+`Docker/.env` only needs the five `POSTGRES_*` / `PGADMIN_*` values used by Compose.
 
-**Parameters:**
-- `project_id` (path, string) - Unique identifier for the project
-- `file` (form-data, file) - PDF file to upload
+Unused leftovers still present in `src/.env`: `GROQ_API_KEY`, `GROQ_API_URL`,
+`COHERE_*`, `HUGGINGFACE_*`, `GENERATION_*`, `INPUT_MAX_CHARACTER`,
+`MAX_OUTPUT_TOKENS`, `TEMPERATURE`. Nothing reads them; remove or restore the
+LLM pipeline.
 
-**Validation Rules:**
-- File must be in PDF format (`application/pdf`)
-- File size must be less than 10 MB
-- File must contain extractable text (not image-only)
-- File must not be empty
+> Never commit `.env` files. They are ignored by `.gitignore`; only
+> `.env.example` belongs in git.
 
-**Response (Success - 201 Created):**
+---
 
-```json
-{
-  "message": "file uploaded successfully",
-  "file_id": "AbCdEf123456_original_filename.pdf"
-}
+## Database and migrations
+
+Models live in `src/models/db/flow_wise/schema/`; migrations in
+`src/models/db/flow_wise/alembic/versions/`.
+
+Current revision chain:
+
+```plaintext
+0db38c0491ba  initial schema
+   └── bdf653dcab64  applications cleanup + unique (cv_file_id, job_id)
+          └── aa7da30d5100  job_requirements → JSONB schema_definition
+                 └── c3f1a9e7b2d4  HR RBAC, one-admin index, job_titles, jobs.job_title_id
 ```
 
-**Response (Error - 400 Bad Request):**
+Commands (from the repository root):
 
-```json
-{
-  "message": "file type is not allowed"
-}
+```bash
+alembic -c src/models/db/flow_wise/alembic.ini current
+alembic -c src/models/db/flow_wise/alembic.ini upgrade head
+alembic -c src/models/db/flow_wise/alembic.ini revision --autogenerate -m "describe change"
+alembic -c src/models/db/flow_wise/alembic.ini downgrade -1
 ```
 
-**Error Responses:**
-- `400 Bad Request` - Invalid file type, size issues, empty content, or image-only PDF
-- `500 Internal Server Error` - File upload failed
+Known schema gaps to fix before relying on a fresh database:
 
-For complete API documentation with interactive testing, visit `/docs` when the server is running.
+- `cv_files.file_hash` is used by the application but is missing from every migration.
+- `companies.email` is unique in the model but not in the initial migration.
+- Enum columns store the Python member **name** (`PUBLISHED`), so compare against
+  enum members, never against `.value` strings.
+- `job_requirements` has no unique constraint on `job_id`, although the code
+  treats it as one requirement per job.
+
+---
+
+## Repository status
+
+The repository is **not runnable in its current state**:
+
+1. `src/services/` and `src/storage/` were deleted from the working tree while
+   `controllers/candidate_controller.py` and `controllers/cv_file_controller.py`
+   still import them. `uvicorn` fails at import time.
+2. Imports use two roots: top-level (`models.*`, `schema.*`) and `src.*`.
+   `src/main.py` inserts `src/` on `sys.path`, so `src.*` cannot resolve; running
+   from the repository root breaks the top-level imports instead.
+3. `src/schema/job_schema.py` imports `src.schema.application_schema`, breaking
+   the `/api/jobs` chain under the `src/` working directory.
+4. Tests in `src/tests/` are untracked and import modules that no longer exist
+   (`controllers.process_controller`, `helpers.json_utils`, `stores.LLM.*`).
+5. 91 files differ from `HEAD` only by CRLF line endings.
+
+Until these are fixed, use the fix order in the next section.
+
+---
+
+## Cleanup checklist
+
+### Restore (do not delete)
+
+- [ ] `git checkout -- src/services src/storage` if the candidate/CV-file APIs
+      are kept. Otherwise delete `routes/candidate_route.py`,
+      `routes/cv_file_route.py`, `controllers/candidate_controller.py`,
+      `controllers/cv_file_controller.py` and the repositories/schemas that only
+      they use, together.
+
+### Delete — dead or broken
+
+- [ ] `src/stores/` — only stale `__pycache__` remains; the LLM sources are gone.
+- [ ] `src/tests/` — untracked and imports missing modules (or restore the LLM
+      feature on its own branch and move the tests there).
+- [ ] `src/assets/files/{project_id}/` — literal placeholder folder.
+- [ ] Every `__pycache__/` directory.
+- [ ] `uploads/cvs/*.pdf` — real candidate CVs are tracked in git. Remove them,
+      add `uploads/` to `.gitignore`, and purge them from history if the repo was
+      ever public.
+- [ ] Commit the already-deleted `HR_INTEGRATION.md` and `project_structure.txt`.
+
+### Delete — after consolidating on the newer stack
+
+- [ ] Legacy jobs: `routes/job_router.py`, `controllers/job_controller.py`,
+      `repositories/job_repository.py`, `schema/job_schema.py`,
+      `schema/application_schema.py`.
+- [ ] Legacy CV upload: `routes/cv_router.py`, `controllers/cv_controller.py`,
+      `controllers/project_controller.py`, `controllers/Base_controller.py`.
+- [ ] Duplicate HR repositories: `repositories/company_repository.py`,
+      `repositories/hr_users_repository.py` and their schemas.
+- [ ] Unused repositories once their APIs are gone: `candidate_repository.py`,
+      `cv_file_repository.py`, `cv_parsed_repository.py`,
+      `job_requirement_repository.py` (unless the requirements API is added).
+- [ ] Unused enums: `candidate_enum.py`, `requirement_type_enum.py`,
+      `file_content_enum.py`, `response_signal.py`.
+- [ ] `repositories/__init__.py` (it re-exports a model, and eagerly imports
+      every repository).
+- [ ] Decide on `.vscode/settings.json`: it is tracked while `.vscode/` is
+      gitignored.
+
+### Add
+
+- [ ] `.gitattributes` with `* text=auto eol=lf`, then `git add --renormalize .`.
+- [ ] `pyproject.toml` (deps, `ruff`, `pytest` with `pythonpath = ["src"]`).
+- [ ] `uploads/`, `data/`, `*.pdf` runtime storage to `.gitignore`.
+- [ ] An app `Dockerfile` and a healthcheck on the database service.
+- [ ] A migration for `cv_files.file_hash` (and the `companies.email` unique
+      constraint).
+- [ ] `GET /health` / `GET /ready` with a database ping.
+- [ ] An authenticated, company-scoped CV download endpoint.
+- [ ] Public posting list/detail endpoints backed by `JobStatus.PUBLISHED`.
 
 ---
 
 ## Roadmap
 
-- [x] **Phase 1: Foundation** - Database schema, models, repositories, and configuration
-- [x] **Phase 2: CV Ingestion** - File upload, validation, and project organization
-- [ ] **Phase 3: AI Parsing** - CV text extraction and intelligent data parsing with LangChain
-- [ ] **Phase 4: Embeddings & Search** - Vector embeddings using pgvector for semantic search
-- [ ] **Phase 5: Matching Engine** - AI-powered job-candidate matching algorithm
-- [ ] **Phase 6: Authentication** - HR user authentication and role-based access control
-- [ ] **Phase 7: Application Workflow** - Complete recruitment pipeline management
-- [ ] **Phase 8: Analytics & Reporting** - Dashboard and hiring insights
+- [x] Foundation — schema, models, repositories, configuration.
+- [x] HR authentication and RBAC (company, admin, members).
+- [x] Job-title catalog and postings lifecycle.
+- [x] Applicant review and hiring pipeline.
+- [x] Public application endpoint.
+- [x] CV ingestion and PDF validation.
+- [ ] Consolidate the job/posting APIs and the CV storage layer.
+- [ ] CV text extraction and structured parsing (NuExtract / LLM providers).
+- [ ] Embeddings and semantic search with pgvector.
+- [ ] Job–candidate matching engine with weighted requirements.
+- [ ] Analytics dashboard and pipeline metrics.
+- [ ] Automated tests, CI and containerised API.
 
 ---
 
 ## Contributing
 
-We welcome contributions to FlowWise! To contribute:
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add some amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
-### Guidelines
-
-- Follow PEP 8 style guidelines for Python code
-- Write clear, descriptive commit messages
-- Add tests for new features when applicable
-- Update documentation as needed
-- Ensure all migrations are properly created and tested
+1. Fork the repository.
+2. Create a branch: `git checkout -b feature/your-feature`.
+3. Follow PEP 8 and the existing router → controller → repository layering.
+4. Scope every HR query by `company_id`.
+5. Add a migration for every schema change and test it against a fresh database.
+6. Write tests for new behaviour.
+7. Open a pull request.
 
 ---
 
 ## Team
 
-This project is developed by a dedicated team of contributors:
-
-| Contributor | GitHub Profile | Role |
-| --- | --- | --- |
-| **ahmedmontaser123** | [@ahmedmontaser123](https://github.com/ahmedmontaser123) | Core Contributor |
-| **mohossam123322-ui** | [@mohossam123322-ui](https://github.com/mohossam123322-ui) | Core Contributor |
-| **saif-yousry** | [@saif-yousry](https://github.com/saif-yousry) | Core Contributor |
-| **ah3asef** | [@ah3asef](https://github.com/ah3asef) | Core Contributor |
-| **Mostafa Abdelkader** | [@MostafaAbdelkader](https://github.com/MostafaAbdelkader) | Core Contributor |
-| **Abobakr** | [@Abobakr](https://github.com/Abobakr) | Core Contributor |
+| Contributor | GitHub |
+| --- | --- |
+| ahmedmontaser123 | [@ahmedmontaser123](https://github.com/ahmedmontaser123) |
+| mohossam123322-ui | [@mohossam123322-ui](https://github.com/mohossam123322-ui) |
+| saif-yousry | [@saif-yousry](https://github.com/saif-yousry) |
+| ah3asef | [@ah3asef](https://github.com/ah3asef) |
+| Mostafa Abdelkader | [@MostafaAbdelkader](https://github.com/MostafaAbdelkader) |
+| Abobakr | [@Abobakr](https://github.com/Abobakr) |
 
 ---
 
 ## License
 
-This project is licensed under the **Apache License 2.0**. See the [LICENSE](LICENSE) file for full details.
+Apache License 2.0 — see [LICENSE](LICENSE).
 
-```
+```text
 Copyright 2026 FlowWise Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -533,11 +579,3 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ```
-
----
-
-<div align="center">
-
-**Made with ❤️ by the FlowWise Team**
-
-</div>

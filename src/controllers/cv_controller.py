@@ -66,7 +66,6 @@ class CvController(BaseController):
         return True, ResponseSignal.FILE_UPLOADED_SUCCESSFULLY.value
 
 
-
     async def validate_cv(self, file: UploadFile):
 
             is_valid, message = self.validate_file_metadata(file)
@@ -81,7 +80,6 @@ class CvController(BaseController):
 
             return True, ResponseSignal.FILE_UPLOADED_SUCCESSFULLY.value
     
-
     async def generate_unique_path(self,original_name,project_id):
         # generate random key 
         random_key = self.generate_random_key()
