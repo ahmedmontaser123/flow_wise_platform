@@ -10,6 +10,14 @@ from schema.job_title_schema import JobTitleCreateRequest, JobTitleOut, JobTitle
 from schema.hr_common_schema import Page
 from schema.posting_schema import PostingCreateRequest, PostingOut, PostingUpdateRequest
 
+
+'''
+crud operations on job titles and postings
+update the applicant status and view the applicant details
+puplish ----draft--- delete
+
+'''
+
 hr_member_router = APIRouter(
     prefix="/api/v1/hr",
     tags=["HR - Member"],

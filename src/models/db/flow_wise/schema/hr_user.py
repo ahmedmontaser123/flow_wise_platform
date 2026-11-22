@@ -32,8 +32,6 @@ class HRUser(Base):
     email = Column(String(255), nullable=False, unique=True)
     password = Column(String(255), nullable=False)
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
-
-    # ---- HR RBAC fields (migration c3f1a9e7b2d4) ----
     role = Column(SQLEnum(HRRole, name="hr_role"), nullable=False, default=HRRole.MEMBER, server_default="MEMBER")
     status = Column(SQLEnum(HRAccountStatus, name="hr_account_status"), nullable=False, default=HRAccountStatus.PENDING, server_default="PENDING")
     approved_by_id = Column(Integer, ForeignKey("hr_users.id", ondelete="SET NULL", onupdate="CASCADE"), nullable=True)

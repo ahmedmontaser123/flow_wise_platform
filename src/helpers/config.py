@@ -1,11 +1,7 @@
+from dataclasses import Field
 from importlib.resources import path
 from pathlib import Path
-
 from pydantic_settings import BaseSettings,SettingsConfigDict
-
-# src/ directory, so the .env file is found no matter which
-# directory the process (uvicorn, alembic, ...) is started from.
-SRC_DIR = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
@@ -18,11 +14,16 @@ class Settings(BaseSettings):
     PGADMIN_DEFAULT_PASSWORD:str
     PGADMIN_PORT:int = 5050
     CHUNK_SIZE:int = 512000
+    JWT_SECRET_KEY: str = Field(..., min_length=32)
+    JWT_ALGORITHM: str 
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    ALLOW_ADMIN_REGISTRATION: bool = True
+
 
     CV_STORAGE_PATH: Path = Path("../data_storage/cv_files")
 
     model_config = SettingsConfigDict(
-        env_file=SRC_DIR / ".env",
+        env_file= ".env",
         extra="ignore"
         )
 

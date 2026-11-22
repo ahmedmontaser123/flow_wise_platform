@@ -20,6 +20,11 @@ class HRUserRepository:
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
+    async def get_by_id(self, hr_id: int) -> HRUser | None:
+        query = select(HRUser).where(HRUser.id == hr_id)
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
     async def get_all_hr_user(self) -> list[HRUser]:
         query = select(HRUser)
         result = await self.session.execute(query)

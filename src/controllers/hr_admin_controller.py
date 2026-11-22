@@ -19,6 +19,7 @@ from schema.hr_common_schema import Page
 from helpers.security import hash_password
 
 
+
 class HRAdminController:
     """Company profile + full lifecycle of HR Member accounts.
 
@@ -78,18 +79,17 @@ class HRAdminController:
         if await self.accounts.email_taken(email):
             raise conflict("An account with this email already exists")
         try:
-            member = await self.accounts.add(
-                HRUser(
-                    company_id=admin.company_id,
-                    full_name=data.full_name,
-                    email=email,
-                    password=hash_password(data.password),
-                    role=HRRole.MEMBER,
-                    status=HRAccountStatus.PENDING,
-                    token_version=0,
-                    created_at=utcnow_naive(),
-                )
+            db_hr_user = HRUser(
+                company_id=admin.company_id,
+                full_name=data.full_name,
+                email=email,
+                password=hash_password(data.password),
+                role=HRRole.MEMBER,
+                status=HRAccountStatus.PENDING,
+
             )
+
+            member = await self.accounts.add(db_hr_user)
             await self.session.commit()
         except IntegrityError:
             await self.session.rollback()

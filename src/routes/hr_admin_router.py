@@ -17,6 +17,14 @@ from schema.hr_member_schema import (
 from schema.hr_common_schema import Page
 from schema.posting_schema import PostingOut
 
+'''
+
+crud operations on hr  
+every function that hr do the admin can do the same but with more privileges
+
+
+'''
+
 hr_admin_router = APIRouter(
     prefix="/api/v1/hr/admin",
     tags=["HR - Admin"],
