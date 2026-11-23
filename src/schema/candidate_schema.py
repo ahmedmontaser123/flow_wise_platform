@@ -33,6 +33,7 @@ class CandidateUpdateStatus(BaseModel): # page fill data candidate ---> store da
 
 
 class CandidateResponse(CandidateCreateRequest):
+    id: int
     created_at: datetime
     status:CandidateStatus | None = None
     model_config = ConfigDict(from_attributes=True)
