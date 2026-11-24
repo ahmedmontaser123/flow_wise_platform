@@ -25,7 +25,10 @@ class CompanyCreateRequest(BaseModel):
             raise ValueError("Must not be empty")
         return value
     
-class CompanyUpdate_request(BaseModel):
+class CompanyUpdateRequest(BaseModel):
+
+    company_name: str = Field(..., min_length=2, max_length=150)
+    
     description: Optional[str] = Field(
         default=None,
         min_length=1,

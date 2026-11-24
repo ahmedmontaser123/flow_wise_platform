@@ -17,10 +17,12 @@ logger = logging.getLogger(__name__)
 
 hr_auth_router = APIRouter(prefix="/api/v1/hr/auth", tags=["HR - Auth"])
 
+
 CurrentHRUser = Annotated[
     HRUser,
     Depends(get_current_hr)
 ]
+
 
 
 @hr_auth_router.post(

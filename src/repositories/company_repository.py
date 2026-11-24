@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete,func
 from models.db.flow_wise.schema import Company
-from schema import CompanyUpdate_request
+from schema import CompanyUpdateRequest
 
 class CompanyRepository:
     def __init__(self, session: AsyncSession):
@@ -27,13 +27,13 @@ class CompanyRepository:
         result = await self.session.execute(query)
         return result.scalars().all()
 
-    async def update_company(self,company_data:Company, company_updated_data: CompanyUpdate_request) -> Company | None:
-
+    async def update_company(self,company_data:Company, company_updated_data: CompanyUpdateRequest) -> Company | None:
+        company_data.company_name = company_updated_data.company_name
         company_data.description = company_updated_data.description
         company_data.address = company_updated_data.address
         company_data.phone = company_updated_data.phone
 
-        await self.session.commit()
+        await self.self.session.flush()
         await self.session.refresh(company_data)
         return company_data
 
