@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload  # الاستيراد الجديد للتحميل المسبق
 from datetime import datetime, timezone
 
-from src.models.db.flow_wise.schema import Job, JobRequirement
-from src.schema.job_schema import JobCreateRequest, JobUpdateRequest
+from models.db.flow_wise.schema import Job, JobRequirement
+from schema import JobCreateRequest, JobUpdateRequest
 
 class JobRepository:
 

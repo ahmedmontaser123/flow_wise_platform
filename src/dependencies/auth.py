@@ -7,11 +7,11 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from helpers.jwt_handler import decode_access_token
 from repositories import HRUserRepository
-from src.models.db.connection_database import get_db_session
+from models.db.connection_database import get_db_session
 
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/auth/login"
+    tokenUrl="/api/v1/hr/auth/login"
 )
 
 
@@ -44,7 +44,7 @@ async def get_current_hr(
         raise credentials_exception
 
     # 4. Validate token version
-    if hr.token_version != payload["tv"]:
+    if hr.token_version != payload["tv"]:  
         raise credentials_exception
 
     return hr

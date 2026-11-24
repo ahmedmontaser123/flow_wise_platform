@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     PGADMIN_DEFAULT_PASSWORD:str
     PGADMIN_PORT:int = 5050
     CHUNK_SIZE:int = 512000
-    JWT_SECRET_KEY: str = Field(..., min_length=32)
+    JWT_SECRET_KEY: str 
     JWT_ALGORITHM: str 
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     ALLOW_ADMIN_REGISTRATION: bool = True

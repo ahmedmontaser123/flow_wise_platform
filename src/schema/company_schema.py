@@ -1,9 +1,9 @@
 
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict,field_validator
 from typing import Optional
 
 
-class CompanyCreate(BaseModel):
+class CompanyCreateRequest(BaseModel):
     company_name: str = Field(..., min_length=2, max_length=150)
     description: Optional[str] = None
     address: str = Field(..., min_length=2, max_length=255)
@@ -15,8 +15,17 @@ class CompanyCreate(BaseModel):
     )
     email: EmailStr
 
-
-class CompanyUpdate(BaseModel):
+    @field_validator("company_name")
+    @classmethod
+    def normalize_company_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = " ".join(value.split())
+        if not value:
+            raise ValueError("Must not be empty")
+        return value
+    
+class CompanyUpdate_request(BaseModel):
     description: Optional[str] = Field(
         default=None,
         min_length=1,
@@ -34,11 +43,9 @@ class CompanyUpdate(BaseModel):
         pattern=r"^\+?[0-9]+$"
     )
 
-
 class CompanyResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
     company_name: str
     description: str | None
     address: str

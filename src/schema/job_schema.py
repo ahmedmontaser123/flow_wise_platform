@@ -4,7 +4,7 @@ from typing import Any  # تمت الإضافة لدعم نوع البيانات
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from models.enums import EmployType, ExperienceLevel, JobStatus
-from src.schema.application_schema import ApplicationResponse
+from .application_schema import ApplicationResponse
 
 
 class JobCreateRequest(BaseModel):

@@ -1,1 +1,1 @@
-from .cv_router import cv_router
+from .hr_auth_router import hr_auth_router

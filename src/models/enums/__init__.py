@@ -9,3 +9,4 @@ from .requirement_type_enum import RequirementType
 from .file_content_enum import FileContent
 from .response_signal import ResponseSignal
 from .hr_role_enum import HRRole
+from .hr_account_status_enum import HRAccountStatus
