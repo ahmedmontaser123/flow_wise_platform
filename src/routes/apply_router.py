@@ -10,7 +10,7 @@ from models.db.connection_database import get_db_session
 from models.db.flow_wise.schema.candidate import Candidate
 from models.db.flow_wise.schema.cv_file import CvFile
 from models.db.flow_wise.schema.application import Application
-from models.db.flow_wise.schema.job import Job
+from models.db.flow_wise.schema.job import Job  
 from models.enums import ApplicationStatus
 
 DBSession = Annotated[AsyncSession, Depends(get_db_session)]
@@ -32,7 +32,7 @@ async def apply_for_job(
     job = await session.get(Job, job_id)
     if not job:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_404_NOT_FOUND, 
             detail="Job not found."
         )
 
@@ -67,7 +67,7 @@ async def apply_for_job(
             status_code=status.HTTP_409_CONFLICT,
             detail="You have already applied for this job."
         )
-
+    
     # 4. Handle CV File (Idempotency check via Hash & Local Storage)
     file_content = await cv_file.read()
     file_hash = hashlib.sha256(file_content).hexdigest()
@@ -87,11 +87,11 @@ async def apply_for_job(
         # إنشاء مسار التخزين إذا لم يكن موجوداً
         upload_dir = "uploads/cvs"
         os.makedirs(upload_dir, exist_ok=True)
-
+        
         # حفظ الملف فيزيائياً باسم فريد لمنع تداخل الأسماء
         unique_filename = f"{uuid.uuid4()}_{cv_file.filename}"
         file_path = os.path.join(upload_dir, unique_filename)
-
+        
         with open(file_path, "wb") as f:
             f.write(file_content)
 
@@ -111,7 +111,7 @@ async def apply_for_job(
         cv_file_id=cv_id,
         status=ApplicationStatus.RECEIVED  # التعديل تم هنا بنجاح
     )
-
+    
     session.add(new_application)
     await session.commit()
 

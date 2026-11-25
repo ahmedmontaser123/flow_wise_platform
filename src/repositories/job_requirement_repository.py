@@ -63,8 +63,8 @@ class JobRequirementRepository:
         updates = requirement_data.model_dump(exclude_unset=True)
         for key, value in updates.items():
             setattr(requirement, key, value)
-
-
+            
+     
         requirement.last_edited = datetime.now(timezone.utc).replace(tzinfo=None)
 
         try:

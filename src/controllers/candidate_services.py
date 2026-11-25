@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.repositories.candidate_repository import CandidateRepository
-from src.schema.candidate_schema import  CandidateCreateRequest,  CandidateUpdateStatus
+from repositories.candidate_repository import CandidateRepository
+from schema.candidate_schema import CandidateCreateRequest, CandidateUpdateStatus
 
 
 class CandidateService:

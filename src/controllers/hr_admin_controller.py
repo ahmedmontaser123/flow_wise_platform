@@ -1,22 +1,21 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from fastapi import HTTPException, status
 from models.db.flow_wise.schema import Company, HRUser
 from models.enums.hr_account_status_enum import HRAccountStatus
 from models.enums.hr_role_enum import HRRole
-
-from helpers.hr_errors import conflict, not_found
-from repositories.hr_account_repository import HRAccountRepository
-from repositories.hr_company_repository import HRCompanyRepository
-from helpers.hr_utils import utcnow, utcnow_naive
-from schema.hr_company_schema import CompanyOut, CompanyUpdateRequest
+from repositories import CompanyRepository,HRUserRepository
 from schema.hr_member_schema import (
     MemberCreateRequest,
     MemberOut,
     MemberUpdateRequest,
 )
 from schema.hr_common_schema import Page
+from schema import CompanyResponse,CompanyUpdateRequest
+
 from helpers.security import hash_password
+from helpers import utcnow
+
 
 
 class HRAdminController:
@@ -29,71 +28,106 @@ class HRAdminController:
 
     def __init__(self, session: AsyncSession):
         self.session = session
-        self.accounts = HRAccountRepository(session)
-        self.companies = HRCompanyRepository(session)
+        self.accounts = HRUserRepository(session)
+        self.companies = CompanyRepository(session)
 
     # ---------------- company ----------------
     async def _company_or_404(self, admin: HRUser) -> Company:
-        company = await self.companies.get(admin.company_id)
+        company = await self.companies.get_company_by_id(admin.company_id)
         if company is None:
-            raise not_found("Company")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOTFOUND,
+                detail="Not found"
+            )
+
         return company
 
-    async def get_company(self, admin: HRUser) -> CompanyOut:
-        return CompanyOut.model_validate(await self._company_or_404(admin))
+    async def _member_or_404(self, admin: HRUser, member_id: int) -> HRUser:
+            member = await self.accounts.get_member(admin.company_id, member_id)
+            if member is None:
+                raise  HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="member is not found"
+                       )
+            return member
 
-    async def update_company(self, admin: HRUser, data: CompanyUpdateRequest) -> CompanyOut:
+    async def get_company(self, admin: HRUser) -> CompanyResponse:
+        return CompanyResponse.model_validate(await self._company_or_404(admin))
+
+    
+    async def update_company(
+        self,
+        admin: HRUser,
+        data: CompanyUpdateRequest
+    ) -> CompanyResponse:
+
         company = await self._company_or_404(admin)
+
         updates = data.model_dump(exclude_unset=True)
 
         if "company_name" in updates:
-            if not updates["company_name"]:
-                raise conflict("Company name cannot be empty")
-            if await self.companies.name_taken(updates["company_name"], exclude_id=company.id):
-                raise conflict("A company with this name already exists")
-        if updates.get("email"):
-            updates["email"] = str(updates["email"]).lower()
-            if await self.companies.email_taken(updates["email"], exclude_id=company.id):
-                raise conflict("A company with this email already exists")
+            new_name = updates["company_name"]
 
-        for key, value in updates.items():
-            setattr(company, key, value)
+            if not new_name or not new_name.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Company name cannot be empty"
+                )
+
+            new_name = new_name.strip()
+
+            if new_name.lower() != company.company_name.lower():
+                existing = await self.companies.get_company_by_name(new_name)
+
+                if existing:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Company name is already taken"
+                    )
+
+            updates["company_name"] = new_name
+
         try:
-            await self.session.commit()
-        except IntegrityError:
-            await self.session.rollback()
-            raise conflict("Company name or email already in use")
-        await self.session.refresh(company)
-        return CompanyOut.model_validate(company)
+            await self.companies.update_company(
+                company_data=company,
+                company_updated_data=data
+            )
 
-    # ---------------- members ----------------
-    async def _member_or_404(self, admin: HRUser, member_id: int) -> HRUser:
-        member = await self.accounts.get_member(admin.company_id, member_id)
-        if member is None:
-            raise not_found("HR member")
-        return member
+            await self.session.commit()
+            await self.session.refresh(company)
+
+        except Exception:
+            await self.session.rollback()
+            raise
+
+        return CompanyResponse.model_validate(company)
 
     async def create_member(self, admin: HRUser, data: MemberCreateRequest) -> MemberOut:
+
         email = str(data.email).lower()
-        if await self.accounts.email_taken(email):
-            raise conflict("An account with this email already exists")
+
+        if await self.accounts.get_by_email(email):
+            raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="email is already taken"
+                        )
+            
         try:
-            member = await self.accounts.add(
-                HRUser(
-                    company_id=admin.company_id,
-                    full_name=data.full_name,
-                    email=email,
-                    password=hash_password(data.password),
-                    role=HRRole.MEMBER,
-                    status=HRAccountStatus.PENDING,
-                    token_version=0,
-                    created_at=utcnow_naive(),
-                )
+            db_hr_user = HRUser(
+                company_id=admin.company_id,
+                full_name=data.full_name,
+                email=email,
+                password=hash_password(data.password),
+                role=HRRole.MEMBER,
+                status=HRAccountStatus.PENDING,
+
             )
+
+            member = await self.accounts.create_hr_user(db_hr_user)
             await self.session.commit()
         except IntegrityError:
             await self.session.rollback()
-            raise conflict("An account with this email already exists")
+            raise 
         return MemberOut.model_validate(member)
 
     async def list_members(
@@ -126,65 +160,67 @@ class HRAdminController:
 
         if "full_name" in updates:
             if not updates["full_name"]:
-                raise conflict("Full name cannot be empty")
+                raise HTTPException(
+                        status_code=status.HTTP_404_NOTFOUND,
+                        detail="not found"
+                        )
+                
             member.full_name = updates["full_name"]
-        if updates.get("email"):
-            email = str(updates["email"]).lower()
-            if await self.accounts.email_taken(email, exclude_user_id=member.id):
-                raise conflict("An account with this email already exists")
-            member.email = email
+        
         if updates.get("password"):
             member.password = hash_password(updates["password"])
-            member.token_version += 1  # old sessions stop working
+            member.token_version += 1  
 
         try:
             await self.session.commit()
         except IntegrityError:
             await self.session.rollback()
-            raise conflict("An account with this email already exists")
+            raise 
+
         return MemberOut.model_validate(member)
 
-    async def approve_member(self, admin: HRUser, member_id: int) -> MemberOut:
+    async def active_member(self, admin: HRUser, member_id: int) -> MemberOut:
+
         member = await self._member_or_404(admin, member_id)
+
         if member.status == HRAccountStatus.ACTIVE:
-            raise conflict("Member is already active")
-        member.status = HRAccountStatus.ACTIVE
-        member.approved_by_id = admin.id
-        member.approved_at = utcnow()
-        await self.session.commit()
-        return MemberOut.model_validate(member)
+            raise HTTPException(
+                          status_code=status.HTTP_409_CONFLICT,
+                          detail="account is already active"
+                         )
 
-    async def decline_member(
-        self, admin: HRUser, member_id: int
-    ) -> MemberOut:
-        member = await self._member_or_404(admin, member_id)
-        if member.status != HRAccountStatus.PENDING:
-            raise conflict("Only a pending member can be declined. Use disable for active members")
-        member.status = HRAccountStatus.DECLINED
-        member.token_version += 1
-        await self.session.commit()
+        try :
+            member.status = HRAccountStatus.ACTIVE
+            member.approved_by_id = admin.id
+            member.approved_at = utcnow()
+            await self.session.commit()
+
+        except IntegrityError:
+                await self.session.rollback()
+                raise 
+       
         return MemberOut.model_validate(member)
 
     async def disable_member(
         self, admin: HRUser, member_id: int
     ) -> MemberOut:
         member = await self._member_or_404(admin, member_id)
-        if member.status != HRAccountStatus.ACTIVE:
-            raise conflict("Only an active member can be disabled")
-        member.status = HRAccountStatus.DISABLED
-        member.token_version += 1  # signs the member out right away
-        await self.session.commit()
-        return MemberOut.model_validate(member)
 
-    async def delete_member(self, admin: HRUser, member_id: int) -> None:
-        member = await self._member_or_404(admin, member_id)
-        # jobs.created_by is ON DELETE CASCADE: deleting a member who owns
-        # postings would silently delete those postings and their applications.
-        postings = await self.accounts.count_postings_by(member.id)
-        if postings > 0:
-            raise conflict(
-                f"This member created {postings} posting(s). Deleting them would also "
-                "delete those postings and their applicants. Disable the account instead"
-            )
-        await self.accounts.delete(member)
-        await self.session.commit()
+        if member.status != HRAccountStatus.ACTIVE:
+            raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="account is already not active"
+                      )
+            
+        try:  
+            member.status = HRAccountStatus.DISABLED
+            member.token_version += 1  # signs the member out right away
+            await self.session.commit()
+
+        except IntegrityError:
+                        await self.session.rollback()
+                        raise 
+
+        return  MemberOut.model_validate(member)
+        
+    

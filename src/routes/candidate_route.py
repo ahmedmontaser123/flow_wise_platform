@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.controllers.candidate_controller import CandidateController
-from src.models.db.connection_database import get_db_session
+from controllers.candidate_controller import CandidateController
+from models.db.connection_database import get_db_session
 
-from src.schema.candidate_schema import CandidateCreateRequest, CandidateUpdateStatus, CandidateResponse
+from schema.candidate_schema import CandidateCreateRequest, CandidateUpdateStatus, CandidateResponse
 
 
 

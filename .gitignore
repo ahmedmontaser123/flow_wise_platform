@@ -38,9 +38,6 @@ htmlcov/
 # Logs
 *.log
 
-# Runtime uploads
-uploads/
-
 # IDE / OS
 .vscode/
 .idea/

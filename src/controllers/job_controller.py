@@ -2,18 +2,17 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-# تمت إضافة JobUpdateRequest هنا للاستيراد
-from src.schema.job_schema import JobCreateRequest, JobResponse, JobUpdateRequest
-from src.repositories.job_repository import JobRepository
+from schema.job_schema import JobCreateRequest, JobResponse, JobUpdateRequest
+from repositories.job_repository import JobRepository
 
-from src.schema.job_schema import JobWithApplicationsResponse
+from schema.job_schema import JobWithApplicationsResponse
 
 class JobController:
-
+    
     @staticmethod
     async def create_job(
         job_data: JobCreateRequest,
-        hr_id: int,
+        hr_id: int, 
         db_session: AsyncSession
     ) -> JobResponse:
         """
@@ -24,7 +23,7 @@ class JobController:
             job_data.created_by = hr_id
             created_job = await job_repo.create_job(job_data)
             return JobResponse.model_validate(created_job)
-
+            
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -44,7 +43,7 @@ class JobController:
             job_repo = JobRepository(db_session)
             jobs = await job_repo.get_all_jobs(limit=limit, offset=offset)
             return [JobResponse.model_validate(job) for job in jobs]
-
+            
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -65,7 +64,7 @@ class JobController:
             job_repo = JobRepository(db_session)
             active_jobs = await job_repo.get_active_jobs(limit=limit, offset=offset)
             return [JobResponse.model_validate(job) for job in active_jobs]
-
+            
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -84,7 +83,7 @@ class JobController:
         """
         try:
             job_repo = JobRepository(db_session)
-
+            
             # التأكد من وجود الوظيفة أولاً
             job = await job_repo.get_job_by_id(job_id)
             if not job:
@@ -92,17 +91,17 @@ class JobController:
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Job with ID {job_id} not found."
                 )
-
+            
             # تحديث الحالة عبر المستودع
             updated_job = await job_repo.update_job(job, status_update)
-
+            
             # إعادة حقن المتطلبات بعد التحديث (لأن session.refresh قد يمسحها من الذاكرة المؤقتة)
             if updated_job.requirements:
                 setattr(updated_job, "schema_definition", updated_job.requirements[0].schema_definition)
                 setattr(updated_job, "weight", updated_job.requirements[0].weight)
-
+                
             return JobResponse.model_validate(updated_job)
-
+            
         except HTTPException:
             raise
         except Exception as e:
@@ -120,19 +119,19 @@ class JobController:
         try:
             job_repo = JobRepository(db_session)
             job = await job_repo.get_job_with_applications(job_id)
-
+            
             if not job:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Job with ID {job_id} not found."
                 )
-
+                
             return JobWithApplicationsResponse.model_validate(job)
-
+            
         except HTTPException:
             raise
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"An error occurred while fetching the job and applications: {str(e)}"
-            )
+            )    

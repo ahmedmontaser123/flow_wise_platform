@@ -10,11 +10,11 @@ class CandidateRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create_candidate(
+    async def create_candidate(        
         self,
         candidate_data: CandidateCreateRequest,
     ) -> Candidate:
-
+                 
         candidate = Candidate(
             full_name=candidate_data.full_name,
             email=candidate_data.email,
@@ -52,7 +52,7 @@ class CandidateRepository:
         candidate: Candidate,
         candidate_data: CandidateUpdateStatus,
     ) -> Candidate:
-
+        
         candidate.status = candidate_data.status
         await self.session.flush()
         await self.session.refresh(candidate)

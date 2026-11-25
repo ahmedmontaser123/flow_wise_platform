@@ -20,7 +20,7 @@ class CvParsed(Base):
     )
     parsed_data = Column(JSON, nullable=True)
     status = Column(SQLEnum(ParsingStatus), nullable=False, default=ParsingStatus.PENDING)
-
+    
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
     # relationships

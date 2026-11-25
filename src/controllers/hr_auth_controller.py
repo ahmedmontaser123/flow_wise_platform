@@ -1,115 +1,163 @@
+from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.db.flow_wise.schema import Company, HRUser
 from models.enums.hr_account_status_enum import HRAccountStatus
 from models.enums.hr_role_enum import HRRole
+from helpers import create_access_token
 
-from helpers.hr_errors import conflict, forbidden, unauthorized
-from repositories.hr_account_repository import HRAccountRepository
-from repositories.hr_company_repository import HRCompanyRepository
-from helpers.hr_utils import utcnow, utcnow_naive
-from schema.hr_auth_schema import AdminRegisterRequest, ChangePasswordRequest, TokenResponse
-from helpers.security import (
-    burn_dummy_verify,
-    create_access_token,
-    hash_password,
-    pwd_context,
-    verify_password,
-)
-from helpers.hr_auth_settings import get_hr_auth_settings
-
-_STATUS_MESSAGES = {
-    HRAccountStatus.PENDING: "Your account is waiting for approval by the HR Admin",
-    HRAccountStatus.DECLINED: "Your account request was declined by the HR Admin",
-    HRAccountStatus.DISABLED: "Your account has been disabled by the HR Admin",
-}
-
-
-def _token_for(user: HRUser) -> TokenResponse:
-    token, expires_in = create_access_token(
-        user_id=user.id,
-        role=user.role.value,
-        company_id=user.company_id,
-        token_version=user.token_version,
-    )
-    return TokenResponse(access_token=token, expires_in=expires_in, role=user.role)
+from repositories import HRUserRepository,CompanyRepository
+from helpers import Settings, burn_dummy_verify,hash_password, pwd_context, verify_password
+from schema import AdminRegisterRequest,TokenResponse,PasswordField,ChangePasswordRequest
+import logging 
 
 
 class HRAuthController:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession,settings:Settings):
         self.session = session
-        self.accounts = HRAccountRepository(session)
-        self.companies = HRCompanyRepository(session)
+        self.hr_accounts = HRUserRepository(session)
+        self.companies = CompanyRepository(session)
+        self.settings = settings
 
-    async def register_admin(self, data: AdminRegisterRequest) -> TokenResponse:
+
+
+    def _token_for(self, user: HRUser) -> TokenResponse:
+        token, expires_in = create_access_token(
+            hr_id=user.id,
+            role=user.role,
+            company_id=user.company_id,
+            token_version=user.token_version,
+        )
+        return TokenResponse(access_token=token, expires_in=expires_in, role=user.role)
+
+    async def register_admin(self,data: AdminRegisterRequest) -> TokenResponse:
         """Create a company and its HR Admin in one transaction."""
-        if not get_hr_auth_settings().ALLOW_ADMIN_REGISTRATION:
-            raise forbidden("Admin registration is closed")
 
-        if await self.companies.name_taken(data.company.company_name):
-            raise conflict("A company with this name already exists")
-        if data.company.email and await self.companies.email_taken(str(data.company.email)):
-            raise conflict("A company with this email already exists")
-        if await self.accounts.email_taken(str(data.admin.email)):
-            raise conflict("An account with this email already exists")
+        # Check whether admin registration is enabled
+        print(data)
+        if not self.settings.ALLOW_ADMIN_REGISTRATION:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin registration is closed"
+            )
+
+        # Normalize emails
+        admin_email = str(data.admin.email).strip().lower()
+
+        company_email = (
+            str(data.company.email).strip().lower()
+            if data.company.email
+            else None
+        )
+
+        # Check for existing company and accounts
+        company_name = await self.companies.get_company_by_name(data.company.company_name)
+        if company_name:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A company with this name already exists"
+            )
+
+        
+        if company_email and await self.companies.get_company_by_email(company_email):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A company with this email already exists"
+            )
+
+        if await self.hr_accounts.get_by_email(admin_email):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An account with this email already exists"
+            )
+
+        # Hash password
+        password_hash = hash_password(data.admin.password)
 
         try:
-            company = await self.companies.add(
+            # Create company
+            company = await self.companies.create_company(
                 Company(
                     company_name=data.company.company_name,
                     description=data.company.description,
                     address=data.company.address,
                     phone=data.company.phone,
-                    email=str(data.company.email).lower() if data.company.email else None,
+                    email=company_email,
                 )
             )
-            admin = await self.accounts.add(
+
+            # Create HR Admin
+            admin = await self.hr_accounts.create_hr_user(
                 HRUser(
                     company_id=company.id,
                     full_name=data.admin.full_name,
-                    email=str(data.admin.email).lower(),
-                    password=hash_password(data.admin.password),
+                    email=admin_email,
+                    password=password_hash,
                     role=HRRole.ADMIN,
                     status=HRAccountStatus.ACTIVE,
-                    approved_at=utcnow(),
-                    token_version=0,
-                    created_at=utcnow_naive(),
+                    token_version=0
                 )
             )
+
             await self.session.commit()
-        except IntegrityError:
+
+        except Exception:
             await self.session.rollback()
-            raise conflict("Company or account already exists")
+            raise 
 
-        return _token_for(admin)
+        return self._token_for(admin)
 
-    async def login(self, email: str, password: str) -> TokenResponse:
-        user = await self.accounts.get_by_email(email)
+    async def login(self,email: str,password: str) -> TokenResponse:
+        email = email.strip().lower()
+        user = await self.hr_accounts.get_by_email(email)
+
         if user is None:
             burn_dummy_verify(password)
-            raise unauthorized()
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+
         if not verify_password(password, user.password):
-            raise unauthorized()
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
 
-        # The password is correct, so it is safe to say why login is refused.
+        # The password is correct, so we can safely explain the account status.
         if user.status != HRAccountStatus.ACTIVE:
-            raise forbidden(_STATUS_MESSAGES.get(user.status, "Account is not active"))
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account is not active"
+            )
 
+        # Upgrade the password hash only when necessary.
         if pwd_context.needs_update(user.password):
             user.password = hash_password(password)
-        await self.session.commit()
-        return _token_for(user)
+            await self.session.commit()
 
-    async def change_password(
-        self, user: HRUser, data: ChangePasswordRequest
-    ) -> TokenResponse:
-        if not verify_password(data.current_password, user.password):
-            raise unauthorized("Current password is incorrect")
-        if data.current_password == data.new_password:
-            raise conflict("New password must be different from the current one")
+        return self._token_for(user)
 
-        user.password = hash_password(data.new_password)
-        user.token_version += 1  # logs out every other session
-        await self.session.commit()
-        return _token_for(user)
+    async def change_password(self, user: HRUser,password:ChangePasswordRequest) -> TokenResponse:
+        if not verify_password(password.current_password.password, user.password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+        if  password.current_password.password == password.new_password.password:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A company with this name already exists"
+            )
+
+        try:
+            await self.hr_accounts.update_password(user,hash_password(password.new_password.password))
+            await self.session.commit()
+
+        except Exception:
+            await self.session.rollback()
+            raise
+
+        return self._token_for(user)
+

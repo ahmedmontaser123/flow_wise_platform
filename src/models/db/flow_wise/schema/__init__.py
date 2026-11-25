@@ -1,4 +1,4 @@
-from .base import *
+﻿from .base import *
 from .application import Application
 from .candidate import Candidate
 from .company import Company

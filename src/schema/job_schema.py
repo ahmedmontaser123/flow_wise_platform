@@ -1,10 +1,10 @@
 from datetime import datetime
-from typing import Any  # تمت الإضافة لدعم نوع البيانات في schema_definition
+from typing import Any  
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from models.enums import EmployType, ExperienceLevel, JobStatus
-from src.schema.application_schema import ApplicationResponse
+from .application_schema import ApplicationResponse
 
 
 class JobCreateRequest(BaseModel):
@@ -64,7 +64,7 @@ class JobResponse(BaseModel):
     status: JobStatus
     created_by: int
     schema_definition: dict[str, Any]
-    weight: float # التعديل الثالث: int إلى float
+    weight: float 
     created_at: datetime
     updated_at: datetime
 
