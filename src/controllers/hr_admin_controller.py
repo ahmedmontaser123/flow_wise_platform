@@ -54,37 +54,53 @@ class HRAdminController:
     async def get_company(self, admin: HRUser) -> CompanyResponse:
         return CompanyResponse.model_validate(await self._company_or_404(admin))
 
-    async def update_company(self, admin: HRUser, data: CompanyUpdateRequest) -> CompanyResponse:
+    
+    async def update_company(
+        self,
+        admin: HRUser,
+        data: CompanyUpdateRequest
+    ) -> CompanyResponse:
+
         company = await self._company_or_404(admin)
+
         updates = data.model_dump(exclude_unset=True)
 
         if "company_name" in updates:
-            if not updates["company_name"]:
+            new_name = updates["company_name"]
+
+            if not new_name or not new_name.strip():
                 raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="A company with this name already exists"
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Company name cannot be empty"
+                )
+
+            new_name = new_name.strip()
+
+            if new_name.lower() != company.company_name.lower():
+                existing = await self.companies.get_company_by_name(new_name)
+
+                if existing:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Company name is already taken"
+                    )
+
+            updates["company_name"] = new_name
+
+        try:
+            await self.companies.update_company(
+                company_data=company,
+                company_updated_data=data
             )
 
+            await self.session.commit()
+            await self.session.refresh(company)
 
-            if company.company_name == updates["company_name"]:
-                raise HTTPException(
-                            status_code=status.HTTP_409_CONFLICT,
-                            detail="A company with this name already exists"
-                            )
+        except Exception:
+            await self.session.rollback()
+            raise
 
-            if await self.companies.get_company_by_name(updates["company_name"]):
-                raise HTTPException(
-                            status_code=status.HTTP_409_CONFLICT,
-                            detail="this name is taken"
-                            )
-
-            try:
-                  await self.companies.update_company(company_data=company,update_company = updates)
-                  await self.session.commit()
-                
-            except Exception:
-                await self.session.rollback()
-                raise
+        return CompanyResponse.model_validate(company)
 
     async def create_member(self, admin: HRUser, data: MemberCreateRequest) -> MemberOut:
 

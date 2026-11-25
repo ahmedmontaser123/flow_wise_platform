@@ -11,7 +11,7 @@ from controllers.hr_admin_controller import HRAdminController
 from controllers.hr_member_controller import HRReviewReader
 from dependencies import require_roles
 from schema.applicant_review_schema import ApplicantDetailOut, ApplicantSummaryOut
-from schema.hr_company_schema import CompanyOut, CompanyUpdateRequest
+from schema.company_schema import CompanyResponse, CompanyUpdateRequest
 from schema.hr_member_schema import (
     MemberCreateRequest,
     MemberOut,
@@ -39,12 +39,12 @@ CurrentAdmin = Annotated[HRUser, Depends(require_admin)]
 
 
 # ---------------- company profile ----------------
-@hr_admin_router.get("/company", response_model=CompanyOut)
+@hr_admin_router.get("/company", response_model=CompanyResponse)
 async def get_company(current: CurrentAdmin, session: AsyncSession = Depends(get_db_session)):
     return await HRAdminController(session).get_company(current)
 
 
-@hr_admin_router.patch("/company", response_model=CompanyOut)
+@hr_admin_router.patch("/company", response_model=CompanyResponse)
 async def update_company(data: CompanyUpdateRequest, current: CurrentAdmin, session: AsyncSession = Depends(get_db_session)):
     return await HRAdminController(session).update_company(current, data)
 
@@ -89,9 +89,6 @@ async def update_member(
 @hr_admin_router.post("/members/{member_id}/approve", response_model=MemberOut)
 async def active_member(member_id: int, current: CurrentAdmin, session: AsyncSession = Depends(get_db_session)):
     return await HRAdminController(session).active_member(current, member_id)
-
-
-
 
 
 @hr_admin_router.post("/members/{member_id}/disable", response_model=MemberOut)

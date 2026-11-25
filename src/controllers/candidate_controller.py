@@ -3,8 +3,8 @@ import logging
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services.candidate_service import CandidateService
-from src.schema.candidate_schema import (
+from .candidate_services import CandidateService
+from schema.candidate_schema import (
     CandidateCreateRequest,
     CandidateUpdateStatus,
     CandidateResponse,
@@ -24,7 +24,7 @@ class CandidateController:
             candidate = await service.create_candidate(
                 candidate_data=candidate_data,
             )
-
+    
             return CandidateResponse.model_validate(candidate)
 
         except ValueError as exc:

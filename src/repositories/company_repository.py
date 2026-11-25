@@ -33,7 +33,7 @@ class CompanyRepository:
         company_data.address = company_updated_data.address
         company_data.phone = company_updated_data.phone
 
-        await self.self.session.flush()
+        await self.session.flush()
         await self.session.refresh(company_data)
         return company_data
 

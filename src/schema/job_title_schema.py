@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from schema.hr_common_schema import clean_name
+from helpers.hr_utils import clean_name
 
 
 class JobTitleCreateRequest(BaseModel):

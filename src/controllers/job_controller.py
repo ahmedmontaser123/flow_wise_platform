@@ -2,11 +2,10 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-# تمت إضافة JobUpdateRequest هنا للاستيراد
-from src.schema.job_schema import JobCreateRequest, JobResponse, JobUpdateRequest
-from src.repositories.job_repository import JobRepository
+from schema.job_schema import JobCreateRequest, JobResponse, JobUpdateRequest
+from repositories.job_repository import JobRepository
 
-from src.schema.job_schema import JobWithApplicationsResponse
+from schema.job_schema import JobWithApplicationsResponse
 
 class JobController:
     

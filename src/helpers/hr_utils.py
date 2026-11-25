@@ -1,4 +1,9 @@
 from datetime import datetime, timezone
+from typing import Annotated
+from fastapi import Depends,HTTPException, status
+from models.enums.hr_role_enum import HRRole
+from models.db.flow_wise.schema import HRUser
+
 
 
 def utcnow() -> datetime:
@@ -36,5 +41,22 @@ def password_rules(value: str) -> str:
     if not any(c.isalpha() for c in value) or not any(c.isdigit() for c in value):
         raise ValueError("Password must contain at least one letter and one number")
     return value
+
+
+def require_roles(*allowed: HRRole):
+    """Dependency factory: allow only the given roles."""
+    from dependencies import get_current_hr
+
+    async def _checker(
+        user: Annotated[HRUser, Depends(get_current_hr)],
+    ) -> HRUser:
+        if user.role not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to perform this action",
+            )
+        return user
+
+    return _checker
 
 

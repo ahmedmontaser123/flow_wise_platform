@@ -4,7 +4,7 @@ from models.db.flow_wise.schema.hr_user import HRUser
 from models.enums.hr_account_status_enum import HRAccountStatus
 from models.enums import HRRole
 from pydantic import EmailStr
-from helpers import like_pattern
+from helpers.hr_utils import like_pattern
 
 class HRUserRepository:
     def __init__(self, session: AsyncSession):
